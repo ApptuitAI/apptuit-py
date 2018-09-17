@@ -38,5 +38,4 @@ deploy:
   on:
     tags: true
     condition: $PACKAGE_VERSION != "" && $IS_PRIMARY_MATRIX_JOB == "true"
-  password:
-    secure: "Ngnzj54Y2ACFOuYDONiZ8ZekXxqhChhvfLs6l8J4Bdqnskbu7XefFko2v1B1Y9sI2kmXh80etqgqJiv7jG/yT7+MA6CmYxz0gt/2qQuXkvaneQL4PRNByhi5AM8pSi0VdZFvdz26xpWlf8iRzhh0soRRoMdfZly/TKyMSGc68LiJYMwNYJ4tGnuB1LBqr+VZfd3GTIxyeWd8Os5AM8Ll/ndZWL0WbiYR/M6ulSFI1MsvHtSZDfaVkCb3vPehPOLY4FjZcFiB+epR1cYA6LmFVQxlrXTw29WbiaBseNNlG/JbJCKQNy/tpe8JR7xmIj+jqiBeEa0Rp12T1o8Qg7OyEXf/6fCAkoxAciRQNk40cvqfyjSA/StmPvyYVP1/xVHMaaY0xi7Gp0IRgfQdHG2WDCTTITdBHOq8h9XFdE/oNxJJIoKzBK5Kj4D2TKFhnA1lC8wKnOl+FaRQC086XOaKIe0L6dQzjSIUeMrkbh/8NjnKtOO30WbZYQTJD+JVtxIRyKlxkjnhjH/7DUPIaxJdBgcsvrZtb13PXc1YhPX59YxN7S+UUTrDo7LgOaspV8VxdXih8TjVlflpABnA5wTfEdT2LfieBMaq/4eFKDMm98tcg7idjAwTCVCd4qP0TxHsZeIky5qS7vkKyeLONs+qDt7l8hBY5sotcpClqu7Glvc="
+  password: $PYPI_CREDS
