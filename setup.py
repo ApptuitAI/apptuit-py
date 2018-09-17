@@ -9,11 +9,14 @@ setup(
     author_email="abhinav.updadhyay@agiltix.ai",
     classifiers=[
         "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3.x",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Operating System :: OS Independent",
-        "License :: Apache-2.0",
+        "License :: OSI Approved :: Apache Software License",
         "Topic :: Software Development :: Libraries :: Python Modules"
         ],
     long_description=open('README.md').read())
