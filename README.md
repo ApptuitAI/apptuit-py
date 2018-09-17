@@ -62,12 +62,9 @@ In [10]: for i in range(10000):
     ...:     dps.append(DataPoint(metric, tags, curtime + i * 60, random.random()))
     ...:
 
-In [11]: dps[0]
-Out[11]: proc.cpu.percent{ip:127.0.0.1, host:localhost}
+In [11]: client.send(dps)
 
-In [12]: client.send(dps)
-
-In [13]: dps = []
+In [12]: dps = []
 
 ```
 
