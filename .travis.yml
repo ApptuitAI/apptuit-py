@@ -32,7 +32,6 @@ before_deploy:
 - PACKAGE_DATE=$(git log -1 --pretty="format:%ad" $TRAVIS_TAG --date=short);
 - echo $PACKAGE_DATE;
 deploy:
-  matrix:
   - provider: pypi
     user: apptuit.ai
     password:
