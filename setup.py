@@ -6,7 +6,7 @@ with open('requirements.txt', 'r') as f:
 setup(
     name="apptuit",
     packages=['apptuit'],
-    version="0.1.0",
+    version="0.2.0",
     description="Apptuit Python Client",
     author="Abhinav Upadhyay",
     author_email="abhinav.updadhyay@agiltix.ai",
