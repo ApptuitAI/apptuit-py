@@ -48,7 +48,7 @@ In [3]: import random
 
 In [4]: token = "mytoken"
 
-In [5]: client = Apptuit(token=token, host="http://localhost", port=4242)
+In [5]: client = Apptuit(token=token)
 
 In [6]: metric = "proc.cpu.percent"
 
