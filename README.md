@@ -1,14 +1,14 @@
-Python client for Apptuit
+# Python client for Apptuit
 
 [![Build Status](https://www.travis-ci.org/ApptuitAI/apptuit-py.svg?branch=master)](https://www.travis-ci.org/ApptuitAI/apptuit-py)
 
-### Installation -
+### Installation
 
 ```
 pip install apptuit
 ```
 
-### Usage -
+### Usage
 
 #### Querying for data
 
