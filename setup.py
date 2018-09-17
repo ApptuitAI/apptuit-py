@@ -19,4 +19,6 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Topic :: Software Development :: Libraries :: Python Modules"
         ],
-    long_description=open('README.md').read())
+    long_description=open('README.md').read(),
+    long_description_content_type="text/markdown"
+)
