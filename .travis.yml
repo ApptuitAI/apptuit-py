@@ -34,8 +34,6 @@ before_deploy:
 deploy:
   - provider: pypi
     user: apptuit.ai
-    password:
-      secure: encrypted password goes here
     distributions: sdist bdist_wheel
     on:
       tags: true
