@@ -35,6 +35,6 @@ deploy:
   distributions: sdist bdist_wheel
   on:
     tags: true
-    condition: $PACKAGE_VERSION != "" && IS_PRIMARY_MATRIX_JOB == "true"
+    condition: $PACKAGE_VERSION != "" && $IS_PRIMARY_MATRIX_JOB == "true"
   password:
     secure: DNi8XbrO7B1HvKv5riTT7HN2f5Bx210mUen1107FIgAGlgmukh/uLFKe9V4gqXou2rl8iFklghEP6OFDiBHow35fr1CAx+M/kf4BteXX8H+zyn7YmjW2xeVsBcgq7uRg2K4ce6y6/kq2br4goWfD1kVawpjkNEJ1lmYP7fKUhV+SPsdsd8uL/ZIO/0kHjubzOi7fbU3BNHLnvdKIAaGJ3ZXtPvU2UZPHDeLxJnwv/A9ui84uCePyHvtvttptM0wuOGxU5shYKIxeA64Jt+U5Yurx/JqakIWKA70Zs9SNOXFtNipLCQgKhdMt3vXoGTo2UaUtxRsl6iVLfJSl9pNCKap+Q9qwaLVDQ5M33wmdbVpllilO1WgrJX4utvNz2negELA+hverc9JOZuavirTwQe8PxiybGc+PLcp00NS9O9HdL8aZd+Xs+SxF4PRZuxmaq3s72a4RTahtW6ZuSCK2OEY+X3wUeHQESGKmEbB4MSk5yQY8EjNT5R543twRJ/dUQyapM22/crkj/y3LNCIvXWOr+u0A5S9bd2bnjHEl47nAHLi8PT65TAaxKSDEjqhzIaQ9pjx4AvPj3LKFTuxm0IoASaptzsVWWnzHYFfOV1ttc7fIVYsPaIHThP5+BrfaLbyjlGa+TT4gXDWVGPPqo1w/5cSB9sR/GTw9sWPmfS0=
