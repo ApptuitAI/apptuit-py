@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name="pyapptuit",
@@ -13,6 +13,7 @@ setup(
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Operating System :: OS Independent",
+        "License :: Apache-2.0",
         "Topic :: Software Development :: Libraries :: Python Modules"
         ],
     long_description=open('README.md').read())
