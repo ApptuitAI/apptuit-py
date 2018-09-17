@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="pyapptuit",
+    name="apptuit-py",
     packages=['apptuit'],
     version="0.1.0",
     description="Apptuit Python Client",
