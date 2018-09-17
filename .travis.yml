@@ -15,7 +15,10 @@ install:
 before_script:
 - if [[ "$TRAVIS_PYTHON_VERSION" = "2.7" ]]; then export IS_PRIMARY_MATRIX_JOB=true;
   fi
-- if [[ $TRAVIS_TAG == apptuit-v* ]]; then export PACKAGE_VERSION=${TRAVIS_TAG#apptuit-v};
+- SEMVER_REGEX="^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$"
+- |
+- if [[ "$TRAVIS_TAG" =~ $SEMVER_REGEX ]]; then
+    export PACKAGE_VERSION=${TRAVIS_TAG#v};
   fi
 - echo $TRAVIS_TAG
 - echo $PACKAGE_VERSION
