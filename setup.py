@@ -1,12 +1,9 @@
 from setuptools import setup
 
-with open('requirements.txt', 'r') as f:
-    required = f.read()
-
 setup(
     name="apptuit",
     packages=['apptuit'],
-    version="0.2.0",
+    version="0.2.1",
     description="Apptuit Python Client",
     author="Abhinav Upadhyay",
     author_email="abhinav.updadhyay@agiltix.ai",
@@ -24,5 +21,5 @@ setup(
         ],
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
-    install_requires=required
+    install_requires=['pandas', 'numpy', 'requests']
 )
