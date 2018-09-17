@@ -302,7 +302,7 @@ class DataPoint(object):
         repr = self.metric + "{"
         for tagk, tagv in self.tags.items():
             repr = repr + "%s:%s, " % (tagk, tagv)
-        repr = repr[:-2] + "}[(%d: %f)]" % (self.timestamp, self.value)
+        repr = repr[:-2] + " timestamp: %d, value: %f}" % (self.timestamp, self.value)
         return repr
 
     def __str__(self):
