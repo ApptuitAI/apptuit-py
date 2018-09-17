@@ -1,5 +1,8 @@
 from setuptools import setup
 
+with open('requirements.txt', 'r') as f:
+    required = f.read()
+
 setup(
     name="apptuit",
     packages=['apptuit'],
@@ -20,5 +23,6 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules"
         ],
     long_description=open('README.md').read(),
-    long_description_content_type="text/markdown"
+    long_description_content_type="text/markdown",
+    install_requires=required
 )
