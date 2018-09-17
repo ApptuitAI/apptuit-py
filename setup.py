@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name="pyapptuit",
     packages=['apptuit'],
-    version="0.1",
+    version="0.1.0",
     description="Apptuit Python Client",
     author="Abhinav Upadhyay",
     author_email="abhinav.updadhyay@agiltix.ai",
@@ -17,4 +17,3 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules"
         ],
     long_description=open('README.md').read())
-
