@@ -17,8 +17,7 @@ before_script:
   fi
 - SEMVER_REGEX="^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$"
 - |
-- if [[ "$TRAVIS_TAG" =~ $SEMVER_REGEX ]]; then
-    export PACKAGE_VERSION=${TRAVIS_TAG#v};
+- if [[ "$TRAVIS_TAG" =~ $SEMVER_REGEX ]]; then export PACKAGE_VERSION=${TRAVIS_TAG#v};
   fi
 - echo $TRAVIS_TAG
 - echo $PACKAGE_VERSION
@@ -32,10 +31,10 @@ before_deploy:
 - PACKAGE_DATE=$(git log -1 --pretty="format:%ad" $TRAVIS_TAG --date=short);
 - echo $PACKAGE_DATE;
 deploy:
-  - provider: pypi
-    user: apptuit.ai
-    distributions: sdist bdist_wheel
-    on:
-      tags: true
+- provider: pypi
+  user: apptuit.ai
+  distributions: sdist bdist_wheel
+  on:
+    tags: true
   password:
     secure: 5KkUQ1Meai12d437HscMu3mtoJGNZbHLXUgvAjrprBQoOPhIzwpDV7A6efELTZw1X4xRComWuFFv3Y05PMFlEQl/nMFb6Rens1vfmDuOUqYZ6/uUj0Oy83gV+g3+OlBh6UAV2ibJOCqD9dojSpOq74yAkR729pF6bwvWiYejHN2mNznT4UeuJ1YGBsW4BmSQjpHFgFtkUpbQbGsTbT3YfzNCB9svapCbhiOl1s72yghTbsbUvSgLjmAdQSZZ1KybDGwZzQWTqbMvnwjuVCfjHsxOnNL5tT997D1bBuWF8kjmmJtZnfUCko4H3k9Shha3YfhDjkqrwpQfe8uCcTO00RqaPDrmksTQaORSUPNSyNcUKoScxSm8790mMFhizQaL0Ttko/4ctRPTPxxm9P4oNuRYEyltxuj1LlRRuW4M6LBIv3se4i0vxzWFQlgVwrdr2tifjELa+wD/wgJQSI0Vo5fPeloFzShJPEIp/ua6fEYL+L+Tf6FgJLUZD4/fSyEvmdjAEHwbCny/I2iZIMRWRdZCmHJ3rV0rWm9nCd2lXvgX/y1gMLugN8hof4Y2TbMaggywtJEWRDWFRTOuAxk0w1MIPwJ3fi3vhGMAcCc9bA0uoG1vJziWq4Gr9yZOklNSvLOUBDN/iaynhPASZV5n0oS8t1Ow3yxPfzvXSkIz6+w=
