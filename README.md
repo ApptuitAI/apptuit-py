@@ -44,13 +44,16 @@ import time
 import random
 token = "mytoken"
 client = Apptuit(token=token)
-metric = "proc.cpu.percent"
+metrics = ["proc.cpu.percent", "node.memory.bytes", "network.send.bytes", "network.receive.bytes", "node.load.avg"]
 tags = {"host": "localhost", "ip": "127.0.0.1"}
 curtime = int(time.time())
 dps = []
 while True:
-    dps.append(DataPoint(metric, tags, curtime + i * 60, random.random()))
-    if len(dps) == 5000:
+    curtime = int(time.time())
+    for metric in metrics:
+        dps.append(DataPoint(metric, tags, curtime, random.random()))
+    if len(dps) == 100:
         client.send(dps)
         dps = []
+    time.sleep(60)
 ```
