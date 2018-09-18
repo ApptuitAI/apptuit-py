@@ -8,6 +8,15 @@
 pip install apptuit
 ```
 
+### Dependencies
+
+Supported Python versions: 2.7.x, 3.4, 3.5, 3.6, 3.7
+
+Requirements:
+- pandas
+- numpy
+- requests
+
 ### Usage
 
 #### Querying for data
