@@ -1,5 +1,0 @@
-Add retries in send API
-Check connections persistence in requests
-Check thread-safety
-global tags
-
