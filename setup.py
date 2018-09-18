@@ -3,8 +3,9 @@ from setuptools import setup
 setup(
     name="apptuit",
     packages=['apptuit'],
-    version="0.2.1",
+    version="0.2.2",
     description="Apptuit Python Client",
+    url="https://github.com/ApptuitAI/apptuit-py",
     author="Abhinav Upadhyay",
     author_email="abhinav.updadhyay@agiltix.ai",
     classifiers=[
