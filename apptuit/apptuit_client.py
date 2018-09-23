@@ -103,6 +103,7 @@ class Apptuit(object):
                 continue
 
             output_id = output["id"]
+            qresult.add_output(output_id)
             for result in results:
                 dps = result["dps"]
                 tags = result["tags"]
@@ -242,7 +243,9 @@ class QueryResult(object):
         self.__output_keys = {}
         self.__output_index = 0
 
-    def add_output(self, output_id, output):
+    def add_output(self, output_id, output=None):
+        if output is None:
+            output = Output()
         self.__outputs[output_id] = output
         self.__output_keys[self.__output_index] = output_id
         self.__output_index += 1
