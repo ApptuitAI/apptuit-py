@@ -15,7 +15,7 @@ import pandas as pd
 VALID_CHARSET = set(ascii_letters + digits + "-_./")
 INVALID_CHARSET = frozenset(map(chr, range(128))) - VALID_CHARSET
 
-def __contains_valid_chars(string):
+def _contains_valid_chars(string):
     return INVALID_CHARSET.isdisjoint(string)
 
 
@@ -75,10 +75,12 @@ class Apptuit(object):
         try:
             url = self.generate_request_url(q, start, end)
             return self._execute_query(url, start, end)
-        except (requests.exceptions.HTTPError, requests.exceptions.SSLError):
+        except (requests.exceptions.HTTPError, requests.exceptions.SSLError) as e:
             if retry_count > 0:
                 time.sleep(1)
                 return self.query(q, start, end, retry_count=retry_count - 1)
+            else:
+                raise ApptuitException("Failed to get response from Apptuit query service due to exception: %s" % str(e))
 
     def __create_payload(self, datapoints):
         data = []
@@ -103,7 +105,7 @@ class Apptuit(object):
                 continue
 
             output_id = output["id"]
-            qresult.add_output(output_id)
+            qresult[output_id] = Output()
             for result in results:
                 dps = result["dps"]
                 tags = result["tags"]
@@ -129,10 +131,7 @@ class Apptuit(object):
         hresp = requests.get(q, headers=headers)
         if self.debug:
             sys.stderr.write('%s\n' % hresp.url)
-        body = hresp.content.decode('utf-8')
-        status = hresp.status_code
-        if status != 200:
-            raise Exception('Failed to get response from QS, response code: %d, url: %s, response body: %s' % (status, hresp.url, body))
+        body = hresp.content
         return self._parse_response(body, start, end)
 
 
@@ -151,8 +150,8 @@ class Apptuit(object):
 class TimeSeries(object):
 
     def __init__(self, metric, tags, index, values):
-        self._metric = metric
-        self._tags = tags
+        self.metric = metric
+        self.tags = tags
         if index is None and values is not None:
             raise ValueError("index cannot be None if values is not None")
         if index is not None and values is None:
@@ -172,7 +171,7 @@ class TimeSeries(object):
 
     @metric.setter
     def metric(self, metric):
-        if not __contains_valid_chars(metric):
+        if not _contains_valid_chars(metric):
             raise ValueError("metric contains characters which are not allowed, only characters [a-z], [A-Z], [0-9] and [-_./] are allowed")
         self._metric = str(metric)
 
@@ -185,9 +184,9 @@ class TimeSeries(object):
         if not isinstance(tags, dict):
             raise ValueError("tags parameter is expected to be a dict type")
         for tagk, tagv in tags.items():
-            if not __contains_valid_chars(tagk):
+            if not _contains_valid_chars(tagk):
                 raise ValueError("tag key %s contains a character which is not allowed, only characters [a-z], [A-Z], [0-9] and [-_./] are allowed" % (tagk))
-            if not __contains_valid_chars(tagv):
+            if not _contains_valid_chars(tagv):
                 raise ValueError("tag value %s contains a character which is not allowed, only characters [a-z], [A-Z], [0-9] and [-_./] are allowed" % (tagv))
         self._tags = tags
 
@@ -231,9 +230,6 @@ class Output(object):
         self.df = df
         return df
     
-    def get_tags_list(self):
-        return [s.tags for s in self.series]
-    
 
 class QueryResult(object):
     def __init__(self, start, end=None):
@@ -243,24 +239,13 @@ class QueryResult(object):
         self.__output_keys = {}
         self.__output_index = 0
 
-    def add_output(self, output_id, output=None):
-        if output is None:
-            output = Output()
-        self.__outputs[output_id] = output
-        self.__output_keys[self.__output_index] = output_id
-        self.__output_index += 1
-
-
     def __repr__(self):
         return '{start: %d, end: %s, outputs: %s}' % (self.start, str(self.end) if self.end is not None else '', ', '.join(self.__outputs.keys()))
 
     def __setitem__(self, key, value):
         self.__outputs[key] = value
-        if isinstance(key, int):
-            return
         self.__output_keys[self.__output_index] = key
         self.__output_index += 1
-        return
 
     def __getitem__(self, key):
         output_id = key
@@ -271,8 +256,8 @@ class QueryResult(object):
 
 class DataPoint(object):
     def __init__(self, metric, tags, timestamp, value):
-        self._metric = metric
-        self._tags = tags
+        self.metric = metric
+        self.tags = tags
         self.timestamp = timestamp
         self.value = value
 
@@ -282,7 +267,7 @@ class DataPoint(object):
 
     @metric.setter
     def metric(self, metric):
-        if not __contains_valid_chars(metric):
+        if not _contains_valid_chars(metric):
             raise ValueError("Metric name contains invalid character(s), allowed characters are a-z, A-Z, 0-9, -, _, ., and /")
         self._metric = metric
 
@@ -295,9 +280,9 @@ class DataPoint(object):
         if not isinstance(tags, dict):
             raise ValueError("Expected a value of type dict for tags")
         for tagk, tagv in tags.items():
-            if not __contains_valid_chars(tagk):
+            if not _contains_valid_chars(tagk):
                 raise ValueError("Tag key %s contains an invalid character, allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagk)
-            if not __contains_valid_chars(tagv):
+            if not _contains_valid_chars(tagv):
                 raise ValueError("Tag value %s contains an invalid character, allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagv)
         self._tags = tags
 

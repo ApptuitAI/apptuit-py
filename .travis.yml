@@ -11,6 +11,7 @@ install:
 - sudo apt-get install -y lintian
 - if [[ $TRAVIS_PYTHON_VERSION != 2.6 ]]; then pip install pylint; fi
 - pip install -r requirements.txt
+- pip install coverage
 before_script:
 - if [[ "$TRAVIS_PYTHON_VERSION" = "2.7" ]]; then export IS_PRIMARY_MATRIX_JOB=true;
   fi
@@ -25,7 +26,10 @@ script:
 - python -c "import sys; print('python version:%s' % sys.version);"
 - python -c "import sys; print('python version:%s' % sys.version[0]);"
 - "./pylint-runner.py -s"
+- nosetests -v --with-coverage
 - python setup.py sdist bdist_wheel
+after_success:
+- bash <(curl -s https://codecov.io/bash)
 before_deploy:
 - PACKAGE_DATE=$(git log -1 --pretty="format:%ad" $TRAVIS_TAG --date=short);
 - echo $PACKAGE_DATE;
