@@ -88,6 +88,9 @@ def test_invalid_metric_name():
         DataPoint(metric_name, tags, ts, random.random())
 
 def test_invalid_datapoint_value():
+    """
+    Test for a non-numeric value for DataPoint
+    """
     metric_name = "node.load.avg.1m"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     ts = int(time.time())
@@ -96,6 +99,9 @@ def test_invalid_datapoint_value():
         DataPoint(metric_name, tags, ts, value)
 
 def test_numeric_datapoint_value():
+    """
+    Test for a numeric DataPoint value
+    """
     metric_name = "node.load.avg.1m"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     ts = int(time.time())
@@ -104,6 +110,9 @@ def test_numeric_datapoint_value():
     assert_is_not_none(dp)
 
 def test_numeric_string_datapoint_value():
+    """
+    Test for a valid DataPoint value which is a string
+    """
     metric_name = "node.load.avg.1m"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     ts = int(time.time())
@@ -112,6 +121,10 @@ def test_numeric_string_datapoint_value():
     assert_is_not_none(dp)
 
 def test_datapoint_value_getter():
+    """
+    Test that the value used to create the DataPoint matches with the value
+    returned by the object after creation
+    """
     metric_name = "node.load.avg.1m"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     ts = int(time.time())
