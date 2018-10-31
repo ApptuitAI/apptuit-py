@@ -141,9 +141,8 @@ class Apptuit(object):
             if retry_count > 0:
                 time.sleep(1)
                 return self.query(query_str, start, end, retry_count=retry_count - 1)
-            else:
-                raise ApptuitException("Failed to get response from Apptuit"
-                                       "query service due to exception: %s" % str(ex))
+            raise ApptuitException("Failed to get response from Apptuit"
+                                   "query service due to exception: %s" % str(ex))
 
     def _execute_query(self, query_string, start, end):
         headers = {}
