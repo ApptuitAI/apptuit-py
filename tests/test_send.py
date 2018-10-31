@@ -5,7 +5,7 @@ try:
 except ImportError:
     from mock import Mock, patch
 
-from nose.tools import assert_raises, ok_, raises
+from nose.tools import assert_raises, ok_, assert_is_not_none, assert_equals
 from apptuit import Apptuit, DataPoint, ApptuitException
 
 @patch('apptuit.apptuit_client.requests.post')
@@ -86,3 +86,35 @@ def test_invalid_metric_name():
     ts = int(time.time())
     with assert_raises(ValueError) as ex:
         DataPoint(metric_name, tags, ts, random.random())
+
+def test_invalid_datapoint_value():
+    metric_name = "node.load.avg.1m"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    ts = int(time.time())
+    value = 'abc'
+    with assert_raises(ValueError) as ex:
+        DataPoint(metric_name, tags, ts, value)
+
+def test_numeric_datapoint_value():
+    metric_name = "node.load.avg.1m"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    ts = int(time.time())
+    value = 3.14
+    dp = DataPoint(metric_name, tags, ts, value)
+    assert_is_not_none(dp)
+
+def test_numeric_string_datapoint_value():
+    metric_name = "node.load.avg.1m"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    ts = int(time.time())
+    value = '3.14'
+    dp = DataPoint(metric_name, tags, ts, value)
+    assert_is_not_none(dp)
+
+def test_datapoint_value_getter():
+    metric_name = "node.load.avg.1m"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    ts = int(time.time())
+    value = 3.14
+    dp = DataPoint(metric_name, tags, ts, value)
+    assert_equals(dp.value, value)

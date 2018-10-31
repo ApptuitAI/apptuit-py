@@ -286,6 +286,23 @@ class DataPoint(object):
                 raise ValueError("Tag value %s contains an invalid character, allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagv)
         self._tags = tags
 
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        if isinstance(value, (int, float)):
+            self._value = value
+
+        elif isinstance(value, str):
+            try:
+                self._value = float(value)
+            except ValueError:
+                raise ValueError("Expected a numeric value got %s" % value)
+        else:
+            raise ValueError("Expected a numeric value for the value parameter")
+
     def __repr__(self):
         repr = self.metric + "{"
         for tagk, tagv in self.tags.items():
