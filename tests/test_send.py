@@ -106,8 +106,8 @@ def test_numeric_datapoint_value():
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     ts = int(time.time())
     value = 3.14
-    dp = DataPoint(metric_name, tags, ts, value)
-    assert_is_not_none(dp)
+    point = DataPoint(metric_name, tags, ts, value)
+    assert_is_not_none(point)
 
 def test_numeric_string_datapoint_value():
     """
@@ -117,8 +117,8 @@ def test_numeric_string_datapoint_value():
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     ts = int(time.time())
     value = '3.14'
-    dp = DataPoint(metric_name, tags, ts, value)
-    assert_is_not_none(dp)
+    point = DataPoint(metric_name, tags, ts, value)
+    assert_is_not_none(point)
 
 def test_datapoint_value_getter():
     """
@@ -129,8 +129,8 @@ def test_datapoint_value_getter():
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     ts = int(time.time())
     value = 3.14
-    dp = DataPoint(metric_name, tags, ts, value)
-    assert_equals(dp.value, value)
+    point = DataPoint(metric_name, tags, ts, value)
+    assert_equals(point.value, value)
 
 def test_nonstring_invalid_datapoint_value():
     """
