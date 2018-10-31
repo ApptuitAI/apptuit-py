@@ -131,3 +131,14 @@ def test_datapoint_value_getter():
     value = 3.14
     dp = DataPoint(metric_name, tags, ts, value)
     assert_equals(dp.value, value)
+
+def test_nonstring_invalid_datapoint_value():
+    """
+    Test for a non-str/numeric value for datapoint value
+    """
+    metric_name = "node.load.avg.1m"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    ts = int(time.time())
+    value = object()
+    with assert_raises(ValueError):
+        DataPoint(metric_name, tags, ts, value)
