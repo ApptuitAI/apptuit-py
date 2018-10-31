@@ -24,12 +24,12 @@ def _contains_valid_chars(string):
 
 def _create_payload(datapoints):
     data = []
-    for dp in datapoints:
+    for point in datapoints:
         row = {}
-        row["metric"] = dp.metric
-        row["timestamp"] = dp.timestamp
-        row["value"] = dp.value
-        row["tags"] = dp.tags
+        row["metric"] = point.metric
+        row["timestamp"] = point.timestamp
+        row["value"] = point.value
+        row["tags"] = point.tags
         data.append(row)
     return data
 
@@ -137,13 +137,13 @@ class Apptuit(object):
         try:
             url = self.__generate_request_url(query_str, start, end)
             return self._execute_query(url, start, end)
-        except (requests.exceptions.HTTPError, requests.exceptions.SSLError) as e:
+        except (requests.exceptions.HTTPError, requests.exceptions.SSLError) as ex:
             if retry_count > 0:
                 time.sleep(1)
                 return self.query(query_str, start, end, retry_count=retry_count - 1)
             else:
                 raise ApptuitException("Failed to get response from Apptuit"
-                                       "query service due to exception: %s" % str(e))
+                                       "query service due to exception: %s" % str(ex))
 
     def _execute_query(self, query_string, start, end):
         headers = {}
@@ -168,6 +168,8 @@ class TimeSeries(object):
     """
 
     def __init__(self, metric, tags, index, values):
+        self._tags = None
+        self._metric = None
         self.metric = metric
         self.tags = tags
         if index is None and values is not None:
@@ -243,11 +245,11 @@ class Output(object):
         """
         series_names = []
         series_list = []
-        for s in self.series:
-            series_name = str(s)
+        for ser in self.series:
+            series_name = str(ser)
             series_names.append(series_name)
-            series_index = pd.to_datetime(s.timestamps, unit='s').tz_localize(tz)
-            pseries = pd.Series(data=s.values, index=series_index)
+            series_index = pd.to_datetime(ser.timestamps, unit='s').tz_localize(tz)
+            pseries = pd.Series(data=ser.values, index=series_index)
             series_list.append(pseries)
         dataframe = pd.concat(series_list, axis=1)
         dataframe.columns = series_names
@@ -299,6 +301,9 @@ class DataPoint(object):
             timestamp: Number of seconds since Unix epoch
             value: value of the metric at this timestamp (int or float)
         """
+        self._metric = None
+        self._tags = None
+        self._value = None
         self.metric = metric
         self.tags = tags
         self.timestamp = timestamp
@@ -350,19 +355,23 @@ class DataPoint(object):
             raise ValueError("Expected a numeric value for the value parameter")
 
     def __repr__(self):
-        repr = self.metric + "{"
+        repr_str = self.metric + "{"
         for tagk, tagv in self.tags.items():
-            repr = repr + "%s:%s, " % (tagk, tagv)
-        repr = repr[:-2] + " timestamp: %d, value: %f}" % (self.timestamp, self.value)
-        return repr
+            repr_str = repr_str + "%s:%s, " % (tagk, tagv)
+        repr_str = repr_str[:-2] + " timestamp: %d, value: %f}" % (self.timestamp, self.value)
+        return repr_str
 
     def __str__(self):
         return self.__repr__()
 
 
 class ApptuitException(Exception):
+    """
+    Generic exception thrown by the query and send APIs
+    """
 
     def __init__(self, msg):
+        super(ApptuitException, self).__init__(msg)
         self.msg = msg
 
     def __repr__(self):

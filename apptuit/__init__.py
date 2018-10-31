@@ -1,3 +1,7 @@
+"""
+Python Client for Apptuit APIs
+"""
+
 from .apptuit_client import Apptuit, DataPoint, ApptuitException
 
 __version__ = '0.2.4'
