@@ -10,6 +10,9 @@ from apptuit import Apptuit, DataPoint, ApptuitException
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_send_positive(mock_post):
+    """
+    Test that send API is working as expected
+    """
     mock_post.return_value.status_code = 204
     token = "asdashdsauh_8aeraerf"
     client = Apptuit(token)
@@ -24,19 +27,22 @@ def test_send_positive(mock_post):
             try:
                 client.send(dps)
             except ApptuitException:
-                not ok_("ApptuitException should not have been raised")
+                ok_(False)
             dps = []
             points_sent += 100
         if points_sent > 500:
             break
-    if len(dps) > 0:
+    if dps:
         try:
             client.send(dps)
         except ApptuitException:
-            not ok_("ApptuitException should not have been raised")
+            ok_(False)
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_send_server_error(mock_post):
+    """
+    Test for the case when there is an error from the backend for send
+    """
     mock_post.return_value.status_code = 500
     token = "asdashdsauh_8aeraerf"
     client = Apptuit(token)
@@ -59,6 +65,9 @@ def test_send_server_error(mock_post):
             client.send(dps)
 
 def test_invalid_chars_in_tag_keys():
+    """
+    Test for invalid character in tag keys
+    """
     metric_name = "node.load_avg.1m"
     tags = {"ho\\st": "localhost", "region": "us-east-1", "service": "web-server"}
     ts = int(time.time())
@@ -66,6 +75,9 @@ def test_invalid_chars_in_tag_keys():
         DataPoint(metric_name, tags, ts, random.random())
 
 def test_invalid_chars_in_tag_values():
+    """
+    Test for invalid character in tag values
+    """
     metric_name = "node.load_avg.1m"
     tags = {"host": "local:host", "region": "us-east-1", "service": "web-server"}
     ts = int(time.time())
@@ -73,6 +85,9 @@ def test_invalid_chars_in_tag_values():
         DataPoint(metric_name, tags, ts, random.random())
 
 def test_tags_not_dict():
+    """
+    Test to validate that only dict type values are expected for tags
+    """
     metric_name = "node.load_avg.1m"
     tags = ["host", "localhost", "region", "us-east-1", "service", "web-server"]
     ts = int(time.time())
@@ -81,6 +96,9 @@ def test_tags_not_dict():
 
 
 def test_invalid_metric_name():
+    """
+    Test for invalid character in metric name
+    """
     metric_name = "node.load+avg.1m"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     ts = int(time.time())
