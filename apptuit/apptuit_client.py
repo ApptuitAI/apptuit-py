@@ -74,20 +74,21 @@ class Apptuit(object):
     Apptuit is the client object, encapsulating the functionalities provided by Apptuit APIs
     """
 
-    def __init__(self, token, host="https://api.apptuit.ai", port=443, debug=False):
+    def __init__(self, token, api_endpoint="https://api.apptuit.ai/", debug=False):
         """
         Creates an apptuit client object
         Params:
             token: Token of the tenant to which we wish to connect
-            host: Host name of the query service (including the protocol)
+            api_endpoint: Apptuit API End point (including the protocol and port)
             port: Port on which the service is running
 
         """
         self.token = token
         self.start = None
         self.end = None
-        self.host = host
-        self.port = port
+        self.endpoint = api_endpoint
+        if self.endpoint[-1] == '/':
+            self.endpoint = self.endpoint[:-1]
         self.debug = debug
 
     def send(self, datapoints):
@@ -97,7 +98,7 @@ class Apptuit(object):
             datapoints: A list of DataPoint objects
         It raises an ApptuitException in case the backend API responds with an error
         """
-        url = self.host + ":" + str(self.port) + "/api/put?sync&sync=60000"
+        url = self.endpoint + "/api/put?sync&sync=60000"
         data = _create_payload(datapoints)
         body = json.dumps(data)
         body = zlib.compress(body.encode("utf-8"))
@@ -122,7 +123,7 @@ class Apptuit(object):
             the integer index of the metric in the query or the metric name.
 
         Example:
-            apptuit = Apptuit(token=token, host='http://api.apptuit.ai')
+            apptuit = Apptuit(token=token, api_endpoint='http://api.apptuit.ai')
             res = apptuit.query("cpu=fetch('node.cpu').downsample('1h', 'avg');\n \
                                  load=fetch('node.load1').downsample('1h', 'avg');\n \
                                  output(cpu, load)",start=start_time)
@@ -156,8 +157,8 @@ class Apptuit(object):
         return _parse_response(body, start, end)
 
     def __generate_request_url(self, query_string, start, end):
-        query_string = self.host + (':%d' % (self.port) if self.port not in {443, 80} else '') + \
-          "/api/query" + _generate_query_string(query_string, start, end)
+        query_string = self.endpoint + "/api/query" + \
+            _generate_query_string(query_string, start, end)
         return query_string
 
 
