@@ -83,6 +83,8 @@ class Apptuit(object):
             port: Port on which the service is running
 
         """
+        if token is None or token is "":
+            raise ValueError("Invalid Token.")
         self.token = token
         self.start = None
         self.end = None
@@ -208,7 +210,7 @@ class TimeSeries(object):
                 raise ValueError("tag key %s contains a character which is not allowed, "
                                  "only characters [a-z], [A-Z], [0-9] and [-_./] are allowed"
                                  % (tagk))
-            if not _contains_valid_chars(tagv):
+            if not _contains_valid_chars(str(tagv)):
                 raise ValueError("tag value %s contains a character which is not allowed, "
                                  "only characters [a-z], [A-Z], [0-9] and [-_./] are allowed"
                                  % (tagv))
@@ -300,6 +302,8 @@ class DataPoint(object):
             timestamp: Number of seconds since Unix epoch
             value: value of the metric at this timestamp (int or float)
         """
+        if tags is None or tags == {}:
+            raise ValueError("Ivalid tags: Metric: "+metric+" need minimum one tag.")
         self.metric = metric
         self.tags = tags
         self.timestamp = timestamp
@@ -328,7 +332,7 @@ class DataPoint(object):
             if not _contains_valid_chars(tagk):
                 raise ValueError("Tag key %s contains an invalid character, "
                                  "allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagk)
-            if not _contains_valid_chars(tagv):
+            if not _contains_valid_chars(str(tagv)):
                 raise ValueError("Tag value %s contains an invalid character, "
                                  "allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagv)
         self._tags = tags
@@ -354,7 +358,7 @@ class DataPoint(object):
         repr = self.metric + "{"
         for tagk, tagv in self.tags.items():
             repr = repr + "%s:%s, " % (tagk, tagv)
-        repr = repr[:-2] + " timestamp: %d, value: %f}" % (self.timestamp, self.value)
+        repr = repr[:-2] + ", timestamp: %d, value: %f}" % (self.timestamp, self.value)
         return repr
 
     def __str__(self):

@@ -22,7 +22,7 @@ setup(
         ],
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
-    install_requires=['pandas', 'numpy', 'requests'],
+    install_requires=['pandas', 'numpy', 'requests', 'pyformance'],
     tests_require=['mock;python_version<"3.3"', 'nose'],
     test_suite='nose.collector',
     data_files=['LICENSE']

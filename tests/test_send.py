@@ -64,6 +64,16 @@ def test_send_server_error(mock_post):
         with assert_raises(ApptuitException):
             client.send(dps)
 
+def test_no_token():
+    """
+            Test that no token raises error
+    """
+    with assert_raises(ValueError) as ex:
+        client=Apptuit("")
+    with assert_raises(ValueError) as ex:
+        client=Apptuit(None)
+
+
 def test_invalid_chars_in_tag_keys():
     """
     Test for invalid character in tag keys
@@ -73,6 +83,18 @@ def test_invalid_chars_in_tag_keys():
     ts = int(time.time())
     with assert_raises(ValueError) as ex:
         DataPoint(metric_name, tags, ts, random.random())
+
+def test_no_tag():
+    """
+    Test for no tag keys
+    """
+    metric_name = "node.load_avg.1m"
+    ts = int(time.time())
+    with assert_raises(ValueError) as ex:
+        DataPoint(metric_name, None, ts, random.random())
+    with assert_raises(ValueError) as ex:
+        DataPoint(metric_name, {}, ts, random.random())
+
 
 def test_invalid_chars_in_tag_values():
     """
