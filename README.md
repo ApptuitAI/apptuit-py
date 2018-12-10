@@ -232,6 +232,8 @@ A *good practise* is to maintain a local cache of the created metrics and reuse 
 creating them every time:
 
 ```python
+import socket
+import time
 from apptuit import timeseries
 from pyformance import MetricsRegistry
 
