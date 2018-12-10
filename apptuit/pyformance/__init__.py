@@ -1,7 +1,6 @@
 """
-    A Pyformance Reporter which works with Apptuit
+    A Pyformance Reporter for Apptuit
 """
 from .apptuit_reporter import ApptuitReporter
-
 
 __all__ = ['ApptuitReporter']

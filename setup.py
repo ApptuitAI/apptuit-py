@@ -3,11 +3,11 @@ from setuptools import setup
 setup(
     name="apptuit",
     packages=['apptuit'],
-    version="0.2.4",
+    version="0.3.0",
     description="Apptuit Python Client",
     url="https://github.com/ApptuitAI/apptuit-py",
     author="Abhinav Upadhyay",
-    author_email="abhinav.updadhyay@agiltix.ai",
+    author_email="abhinav.updadhyay@agilitix.ai",
     classifiers=[
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3.4",

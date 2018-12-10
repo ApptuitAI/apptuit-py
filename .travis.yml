@@ -33,7 +33,6 @@ after_success:
 before_deploy:
 - PACKAGE_DATE=$(git log -1 --pretty="format:%ad" $TRAVIS_TAG --date=short);
 - echo $PACKAGE_DATE;
-- echo $PYPI_CREDS;  
 after_deploy:
 - cat $HOME/.pypirc
 deploy:

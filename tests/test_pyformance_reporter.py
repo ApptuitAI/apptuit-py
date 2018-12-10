@@ -1,20 +1,23 @@
-import json
+"""
+    Tests for apptuit pyformance reporter
+"""
+import random
 import time
 from nose.tools import assert_raises, assert_equals, assert_greater_equal
+from requests.exceptions import HTTPError
+from apptuit import ApptuitException
 from apptuit.pyformance.apptuit_reporter import ApptuitReporter
 from pyformance import MetricsRegistry
-import random
 
 try:
     from unittest.mock import Mock, patch
 except ImportError:
     from mock import Mock, patch
 
-
 @patch('apptuit.apptuit_client.requests.post')
 def test_send_negative(mock_post):
     """
-        Test negative responce
+        Test negative responce from Apptuit backend
     """
     mock_post.return_value.status_code = 503
     token = "asdashdsauh_8aeraerf"
@@ -25,7 +28,6 @@ def test_send_negative(mock_post):
                                token=token,
                                prefix="apr.",
                                tags=tags)
-    reporter.start()
     cput = registry.histogram("cpu")
     count = 0
     while True:
@@ -33,15 +35,16 @@ def test_send_negative(mock_post):
         count = count + 1
         if count > 10000:
             break
-
+    with assert_raises(ApptuitException):
+        reporter.report_now()
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_reporter_thread_active(mock_post):
     """
-        Test that reporter thread is active
+        Test that reporter thread is active even if we are not able to send data
     """
     mock_post.return_value.status_code = 503
-    mock_post.side_effect = ValueError("Test Error")
+    mock_post.side_effect = HTTPError()
     token = "asdashdsauh_8aeraerf"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
@@ -56,10 +59,9 @@ def test_reporter_thread_active(mock_post):
     time.sleep(3)
     assert_greater_equal(mock_post.call_count, 2)
 
-
 def test_invalid_metric_name():
     """
-        Test that acts on invalid metric name
+        Test for invalid metric name when reporting data
     """
     token = "asdashdsauh_8aeraerf"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
@@ -76,10 +78,9 @@ def test_invalid_metric_name():
     with assert_raises(ValueError) as ex:
         reporter._collect_data_points(reporter.registry, None)
 
-
 def test_invalid_tag():
     """
-        Test that acts on invalid tag names
+        Test for invalid tag key when reporting data
     """
     token = "asdashdsauh_8aeraerf"
     tags = {"h\\ost": "localhost", "region": "us-east-1", "service": "web-server"}
@@ -96,10 +97,9 @@ def test_invalid_tag():
     with assert_raises(ValueError) as ex:
         reporter._collect_data_points(reporter.registry, None)
 
-
 def test_invalid_registry():
     """
-        Test that acts on invalid registry
+        Test for invalid registry object when reporting data
     """
     token = "asdashdsauh_8aeraerf"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
@@ -112,11 +112,10 @@ def test_invalid_registry():
     with assert_raises(AttributeError) as ex:
         reporter._collect_data_points(None, None)
 
-
 @patch('apptuit.apptuit_client.requests.post')
 def test_tags_with_key(mock_post):
     """
-            Test that additions tags work
+        Test that additions tags work
     """
     mock_post.return_value.status_code = 204
     token = "asdashdsauh_8aeraerf"
@@ -131,7 +130,6 @@ def test_tags_with_key(mock_post):
     for i in range(1, 10):
         cpu.add(random.randint(i, 100))
     reporter.report_now()
-
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_tags_with_key_invalid(mock_post):
@@ -150,9 +148,8 @@ def test_tags_with_key_invalid(mock_post):
     cpu = registry.histogram('cpu {"tagk1":1,"tagk2":"tagv2"')
     for i in range(1, 10):
         cpu.add(random.randint(i, 100))
-    with assert_raises(ValueError) as ex:
+    with assert_raises(ValueError):
         reporter.report_now()
-
 
 def test_calling_report_now():
     """
@@ -173,10 +170,9 @@ def test_calling_report_now():
         reporter.report_now()
         assert_equals(mock_method.called, True)
 
-
 def test_zero_tags():
     """
-            Test that zero tags raise error
+        Test that using reporter without tags raises error
     """
     token = "asdashdsauh_8aeraerf"
     registry = MetricsRegistry()
@@ -186,53 +182,8 @@ def test_zero_tags():
                                prefix="apr.")
     counter_test = registry.counter('counter')
     counter_test.inc(2)
-    with assert_raises(ValueError) as ex:
+    with assert_raises(ValueError):
         reporter.report_now()
-
-
-def test_encode_tags():
-    """
-            Test encoding tags
-    """
-    token = "asdashdsauh_8aeraerf"
-    registry = MetricsRegistry()
-    reporter = ApptuitReporter(registry=registry,
-                               reporting_interval=1,
-                               token=token,
-                               prefix="apr.")
-    counter_test = registry.counter('counter')
-    counter_test.inc(2)
-    with assert_raises(ValueError) as ex:
-        reporter.encode_metric_name("cpu", None)
-    with assert_raises(ValueError) as ex:
-        reporter.encode_metric_name(None, {1: 2})
-    with assert_raises(ValueError) as ex:
-        reporter.encode_metric_name("", None)
-    tags = {"tk1": "tv1", "tk2": "tv2"}
-    name = "test"
-    assert_equals('test{"tk1": "tv1", "tk2": "tv2"}', reporter.encode_metric_name(name, tags))
-
-@patch('apptuit.apptuit_client.requests.post')
-def test_decode_tags(mock_post):
-    """
-            Test decoding tags
-    """
-    mock_post.return_value.status_code = 204
-    token = "asdashdsauh_8aeraerf"
-    registry = MetricsRegistry()
-    reporter = ApptuitReporter(registry=registry,
-                               reporting_interval=1,
-                               token=token,
-                               prefix="apr.")
-    counter_test = registry.counter('counter{"tk1": "tv1", "tk2": "tv2"}')
-    counter_test.inc(2)
-    with assert_raises(ValueError) as ex:
-        reporter.decode_metric_name("cpu {sjd")
-    with assert_raises(ValueError) as ex:
-        reporter.decode_metric_name(None)
-    assert_equals(("test", {"tk1": "tv1", "tk2": "tv2"}), reporter.decode_metric_name('test {"tk1":"tv1","tk2":"tv2"}'))
-    reporter.report_now()
-    assert_equals(("apr.counter.count", {"tk1": "tv1", "tk2": "tv2"}), reporter.decode_metric_name('apr.counter.count{"tk1":"tv1","tk2":"tv2"}'))
 
 
 def test_no_token():
@@ -245,10 +196,9 @@ def test_no_token():
                         reporting_interval=1,
                         prefix="apr.")
 
-
 def test_collect_data_points():
     """
-                Test that Collect Data Points is valid
+        Test data is being collected correctly
     """
     token = "asdashdsauh_8aeraerf"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}

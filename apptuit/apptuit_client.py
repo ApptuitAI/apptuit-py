@@ -86,8 +86,6 @@ class Apptuit(object):
         if token is None or token is "":
             raise ValueError("Invalid Token.")
         self.token = token
-        self.start = None
-        self.end = None
         self.endpoint = api_endpoint
         if self.endpoint[-1] == '/':
             self.endpoint = self.endpoint[:-1]
