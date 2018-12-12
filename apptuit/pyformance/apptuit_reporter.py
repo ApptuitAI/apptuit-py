@@ -12,11 +12,11 @@ class ApptuitReporter(Reporter):
         super(ApptuitReporter, self).__init__(registry=registry,
                                               reporting_interval=reporting_interval)
         self.endpoint = api_endpoint
-        self.metric_tags = {}
         self.token = token
         self.tags = tags
         self.prefix = prefix if prefix is not None else ""
         self.client = Apptuit(token, api_endpoint)
+        self.__decoded_metrics_cache = {}
 
     def report_now(self, registry=None, timestamp=None):
         """
@@ -26,7 +26,7 @@ class ApptuitReporter(Reporter):
             timestamp: timestamp of the data point
         """
         dps = self._collect_data_points(registry or self.registry, timestamp)
-        if len(dps) > 0:
+        if dps:
             self.client.send(dps)
 
     def _get_tags(self, key):
@@ -37,11 +37,12 @@ class ApptuitReporter(Reporter):
         Returns:
             metric name, dictionary of tags
         """
-        if key not in self.metric_tags.keys():
-            metric_name, metric_tags = timeseries.decode_metric(key)
-            self.metric_tags[key] = (metric_name, metric_tags)
-        else:
-            metric_name, metric_tags = self.metric_tags[key]
+        val = self.__decoded_metrics_cache.get(key)
+        if val:
+            return val[0], val[1]
+
+        metric_name, metric_tags = timeseries.decode_metric(key)
+        self.__decoded_metrics_cache[key] = (metric_name, metric_tags)
         return metric_name, metric_tags
 
     def _collect_data_points(self, registry, timestamp=None):
