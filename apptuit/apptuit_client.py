@@ -83,8 +83,8 @@ class Apptuit(object):
             port: Port on which the service is running
 
         """
-        if token is None or token is "":
-            raise ValueError("Invalid Token.")
+        if not token:
+            raise ValueError("Invalid token")
         self.token = token
         self.endpoint = api_endpoint
         if self.endpoint[-1] == '/':
