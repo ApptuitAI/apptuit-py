@@ -3,7 +3,7 @@
 """
 import random
 import time
-from nose.tools import assert_raises, assert_equals, assert_greater_equal
+from nose.tools import assert_raises, assert_equals, assert_greater_equal, assert_true
 from requests.exceptions import HTTPError
 from apptuit import ApptuitException
 from apptuit.pyformance.apptuit_reporter import ApptuitReporter
@@ -214,5 +214,86 @@ def test_collect_data_points():
     assert_equals(len(dps), 1)
     assert_equals(dps[0].value, 2)
     assert_equals(dps[0].metric, "apr.counter.count")
-    assert_equals(dps[0].tags, {'host': 'localhost', 'region': 'us-east-1', 'service': 'web-server', 'tk1': 'tv1',
+    assert_equals(dps[0].tags, {'host': 'localhost', 'region': 'us-east-1',
+                                'service': 'web-server', 'tk1': 'tv1',
                                 'tk2': 'tv2'})
+
+def test_globaltags_override():
+    """
+        Test that if the global tags and metric tags contain same tag key,
+        the metric tags override global tags
+    """
+    token = "asdashdsauh_8aeraerf"
+    tags = {"region": "us-east-1"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               reporting_interval=1,
+                               token=token,
+                               tags=tags)
+    counter1 = registry.counter('counter1 {"region":"us-west-2","id": 1}')
+    counter2 = registry.counter('counter2 {"region":"us-west-3","id": 2, "new_tag": "foo"}')
+    counter3 = registry.counter('counter3')
+    counter1.inc(2)
+    counter2.inc()
+    counter3.inc()
+    dps = reporter._collect_data_points(reporter.registry)
+    dps = sorted(dps, key=lambda x: x.metric)
+    assert_equals(dps[0].tags, {"region": "us-west-2", "id": 1})
+    assert_equals(dps[1].tags, {"region": "us-west-3", "id": 2, "new_tag": "foo"})
+    assert_equals(dps[2].tags, {"region": "us-east-1"})
+    assert_equals(reporter.tags, {"region": "us-east-1"})
+
+def test_globaltags_none():
+    """
+        Test that metric tags work when global tags are not present
+    """
+    token = "asdashdsauh_8aeraerf"
+    tags = {"region": "us-east-1"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               reporting_interval=1,
+                               token=token,
+                               tags=None)
+    counter1 = registry.counter('counter1 {"region":"us-west-2","id": 1}')
+    counter2 = registry.counter('counter2 {"region":"us-west-3","id": 2, "new_tag": "foo"}')
+    counter1.inc(2)
+    counter2.inc()
+    dps = reporter._collect_data_points(reporter.registry)
+    dps = sorted(dps, key=lambda x: x.metric)
+    assert_equals(dps[0].tags, {"region": "us-west-2", "id": 1})
+    assert_equals(dps[1].tags, {"region": "us-west-3", "id": 2, "new_tag": "foo"})
+    assert_true(reporter.tags is None)
+
+def test_valid_prefix():
+    """
+        Test that prefix works
+    """
+    token = "asdashdsauh_8aeraerf"
+    tags = {"region": "us-east-1"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               reporting_interval=1,
+                               prefix="pre-",
+                               token=token,
+                               tags=tags)
+    counter1 = registry.counter('counter1')
+    counter1.inc()
+    dps = reporter._collect_data_points(reporter.registry)
+    assert_equals(dps[0].metric, "pre-counter1.count")
+
+def test_none_prefix():
+    """
+        Test for None prefix
+    """
+    token = "asdashdsauh_8aeraerf"
+    tags = {"region": "us-east-1"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               reporting_interval=1,
+                               prefix=None,
+                               token=token,
+                               tags=tags)
+    counter1 = registry.counter('counter1')
+    counter1.inc()
+    dps = reporter._collect_data_points(reporter.registry)
+    assert_equals(dps[0].metric, "counter1.count")
