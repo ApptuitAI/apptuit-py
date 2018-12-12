@@ -3,7 +3,7 @@
 """
 import random
 import time
-from nose.tools import assert_raises, assert_equals, assert_greater_equal
+from nose.tools import assert_raises, assert_equals, assert_greater_equal, assert_true
 from requests.exceptions import HTTPError
 from apptuit import ApptuitException
 from apptuit.pyformance.apptuit_reporter import ApptuitReporter

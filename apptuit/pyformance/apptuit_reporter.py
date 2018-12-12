@@ -56,12 +56,14 @@ class ApptuitReporter(Reporter):
         timestamp = timestamp or int(round(self.clock.time()))
         metrics = registry.dump_metrics()
         dps = []
-        global_tags = self.tags
+        global_tags = self.tags if self.tags else {}
         for key in metrics.keys():
             metric_name, metric_tags = self._get_tags(key)
-            if metric_tags:
+            if metric_tags and global_tags:
                 tags = global_tags.copy()
                 tags.update(metric_tags)
+            elif metric_tags:
+                tags = metric_tags
             else:
                 tags = global_tags
             for value_key in metrics[key].keys():
