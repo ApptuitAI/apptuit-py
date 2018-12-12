@@ -234,3 +234,4 @@ def test_globaltags_override():
     counter_test.inc(2)
     dps = reporter._collect_data_points(reporter.registry)
     assert_equals(dps[0].tags, {"region": "us-west-2", "tk2": "tv2"})
+    assert_equals(reporter.tags, {"region": "us-east-1"})

@@ -56,7 +56,7 @@ class ApptuitReporter(Reporter):
         timestamp = timestamp or int(round(self.clock.time()))
         metrics = registry.dump_metrics()
         dps = []
-        tags = self.tags
+        tags = {} if self.tags is None else self.tags.copy()
         for key in metrics.keys():
             metric_name, metric_tags = self._get_tags(key)
             if self.tags is not None and len(self.tags) != 0:
