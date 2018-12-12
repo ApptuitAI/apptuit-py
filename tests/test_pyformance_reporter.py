@@ -242,3 +242,58 @@ def test_globaltags_override():
     assert_equals(dps[1].tags, {"region": "us-west-3", "id": 2, "new_tag": "foo"})
     assert_equals(dps[2].tags, {"region": "us-east-1"})
     assert_equals(reporter.tags, {"region": "us-east-1"})
+
+def test_globaltags_none():
+    """
+        Test that metric tags work when global tags are not present
+    """
+    token = "asdashdsauh_8aeraerf"
+    tags = {"region": "us-east-1"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               reporting_interval=1,
+                               token=token,
+                               tags=None)
+    counter1 = registry.counter('counter1 {"region":"us-west-2","id": 1}')
+    counter2 = registry.counter('counter2 {"region":"us-west-3","id": 2, "new_tag": "foo"}')
+    counter1.inc(2)
+    counter2.inc()
+    dps = reporter._collect_data_points(reporter.registry)
+    dps = sorted(dps, key=lambda x: x.metric)
+    assert_equals(dps[0].tags, {"region": "us-west-2", "id": 1})
+    assert_equals(dps[1].tags, {"region": "us-west-3", "id": 2, "new_tag": "foo"})
+    assert_true(reporter.tags is None)
+
+def test_valid_prefix():
+    """
+        Test that prefix works
+    """
+    token = "asdashdsauh_8aeraerf"
+    tags = {"region": "us-east-1"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               reporting_interval=1,
+                               prefix="pre-",
+                               token=token,
+                               tags=tags)
+    counter1 = registry.counter('counter1')
+    counter1.inc()
+    dps = reporter._collect_data_points(reporter.registry)
+    assert_equals(dps[0].metric, "pre-counter1.count")
+
+def test_none_prefix():
+    """
+        Test for None prefix
+    """
+    token = "asdashdsauh_8aeraerf"
+    tags = {"region": "us-east-1"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               reporting_interval=1,
+                               prefix=None,
+                               token=token,
+                               tags=tags)
+    counter1 = registry.counter('counter1')
+    counter1.inc()
+    dps = reporter._collect_data_points(reporter.registry)
+    assert_equals(dps[0].metric, "counter1.count")

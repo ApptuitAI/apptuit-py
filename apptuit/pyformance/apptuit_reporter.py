@@ -8,14 +8,14 @@ from apptuit import Apptuit, DataPoint, timeseries
 class ApptuitReporter(Reporter):
 
     def __init__(self, registry=None, reporting_interval=10, token=None,
-                 api_endpoint="https://api.apptuit.ai", prefix="", tags={}):
+                 api_endpoint="https://api.apptuit.ai", prefix="", tags=None):
         super(ApptuitReporter, self).__init__(registry=registry,
-             reporting_interval=reporting_interval)
+                                              reporting_interval=reporting_interval)
         self.endpoint = api_endpoint
         self.metric_tags = {}
         self.token = token
         self.tags = tags
-        self.prefix = prefix
+        self.prefix = prefix if prefix is not None else ""
         self.client = Apptuit(token, api_endpoint)
 
     def report_now(self, registry=None, timestamp=None):
