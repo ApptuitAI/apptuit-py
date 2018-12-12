@@ -231,18 +231,14 @@ def test_globaltags_override():
                                token=token,
                                tags=tags)
     counter1 = registry.counter('counter1 {"region":"us-west-2","id": 1}')
-    counter2 = registry.counter('counter2 {"region":"us-west-2","id": 2, "new_tag": "foo"}')
+    counter2 = registry.counter('counter2 {"region":"us-west-3","id": 2, "new_tag": "foo"}')
     counter3 = registry.counter('counter3')
     counter1.inc(2)
     counter2.inc()
     counter3.inc()
     dps = reporter._collect_data_points(reporter.registry)
-    for i in range(3):
-        dp = dps[i]
-        if dp.metric == 'counter1':
-            assert_equals(dp.tags, {"region": "us-west-2", "id": 1})
-        elif dp.metric == 'counter2':
-            assert_equals(dp.tags, {"region": "us-west-3", "id": 2, "new_tag": "foo"})
-        elif dp.metric == 'counter3':
-            assert_equals(dp.tags, {"region": "us-east-1"})
+    dps = sorted(dps, key=lambda x: x.metric)
+    assert_equals(dps[0].tags, {"region": "us-west-2", "id": 1})
+    assert_equals(dps[1].tags, {"region": "us-west-3", "id": 2, "new_tag": "foo"})
+    assert_equals(dps[2].tags, {"region": "us-east-1"})
     assert_equals(reporter.tags, {"region": "us-east-1"})
