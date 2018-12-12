@@ -59,8 +59,7 @@ class ApptuitReporter(Reporter):
         tags = {} if self.tags is None else self.tags.copy()
         for key in metrics.keys():
             metric_name, metric_tags = self._get_tags(key)
-            if self.tags is not None and len(self.tags) != 0:
-                tags.update(metric_tags)
+            tags.update(metric_tags)
             for value_key in metrics[key].keys():
                 dps.append(DataPoint(metric="{0}{1}.{2}".format(self.prefix, metric_name, value_key),
                                      tags=tags,
