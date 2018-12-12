@@ -8,7 +8,7 @@ from apptuit import Apptuit, DataPoint, timeseries
 class ApptuitReporter(Reporter):
 
     def __init__(self, registry=None, reporting_interval=10, token=None,
-                 api_endpoint="https://api.apptuit.ai", prefix="", tags=None):
+                 api_endpoint="https://api.apptuit.ai", prefix="", tags={}):
         super(ApptuitReporter, self).__init__(registry=registry,
              reporting_interval=reporting_interval)
         self.endpoint = api_endpoint
@@ -56,10 +56,14 @@ class ApptuitReporter(Reporter):
         timestamp = timestamp or int(round(self.clock.time()))
         metrics = registry.dump_metrics()
         dps = []
-        tags = {} if self.tags is None else self.tags.copy()
+        global_tags = self.tags
         for key in metrics.keys():
             metric_name, metric_tags = self._get_tags(key)
-            tags.update(metric_tags)
+            if metric_tags:
+                tags = global_tags.copy()
+                tags.update(metric_tags)
+            else:
+                tags = global_tags
             for value_key in metrics[key].keys():
                 dps.append(DataPoint(metric="{0}{1}.{2}".format(self.prefix, metric_name, value_key),
                                      tags=tags,
