@@ -214,5 +214,23 @@ def test_collect_data_points():
     assert_equals(len(dps), 1)
     assert_equals(dps[0].value, 2)
     assert_equals(dps[0].metric, "apr.counter.count")
-    assert_equals(dps[0].tags, {'host': 'localhost', 'region': 'us-east-1', 'service': 'web-server', 'tk1': 'tv1',
+    assert_equals(dps[0].tags, {'host': 'localhost', 'region': 'us-east-1',
+                                'service': 'web-server', 'tk1': 'tv1',
                                 'tk2': 'tv2'})
+
+def test_globaltags_override():
+    """
+        Test that if the global tags and metric tags contain same tag key,
+        the metric tags override global tags
+    """
+    token = "asdashdsauh_8aeraerf"
+    tags = {"region": "us-east-1"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               reporting_interval=1,
+                               token=token,
+                               tags=tags)
+    counter_test = registry.counter('counter {"region":"us-west-2","tk2":"tv2"}')
+    counter_test.inc(2)
+    dps = reporter._collect_data_points(reporter.registry)
+    assert_equals(dps[0].tags, {"region": "us-west-2", "tk2": "tv2"})

@@ -56,13 +56,14 @@ class ApptuitReporter(Reporter):
         timestamp = timestamp or int(round(self.clock.time()))
         metrics = registry.dump_metrics()
         dps = []
+        tags = self.tags
         for key in metrics.keys():
             metric_name, metric_tags = self._get_tags(key)
             if self.tags is not None and len(self.tags) != 0:
-                metric_tags.update(self.tags)
+                tags.update(metric_tags)
             for value_key in metrics[key].keys():
                 dps.append(DataPoint(metric="{0}{1}.{2}".format(self.prefix, metric_name, value_key),
-                                     tags=metric_tags,
+                                     tags=tags,
                                      timestamp=timestamp,
                                      value=metrics[key][value_key]))
         return dps
