@@ -2,8 +2,8 @@ from setuptools import setup
 
 setup(
     name="apptuit",
-    packages=['apptuit'],
-    version="0.3.0",
+    packages=['apptuit', 'apptuit.pyformance'],
+    version="0.3.1",
     description="Apptuit Python Client",
     url="https://github.com/ApptuitAI/apptuit-py",
     author="Abhinav Upadhyay",

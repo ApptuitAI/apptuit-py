@@ -7,7 +7,7 @@
 ## Installation
 
 ```
-pip install apptuit
+pip install apptuit --upgrade
 ```
 
 ## Dependencies
