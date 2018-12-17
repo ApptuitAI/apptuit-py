@@ -16,7 +16,7 @@ import zlib
 import requests
 import pandas as pd
 
-APPTUIT_API_TOKEN = "APPTUIT_API_TOKEN"
+APPTUIT_PY_TOKEN = "APPTUIT_PY_TOKEN"
 APPTUIT_PY_TAGS = "APPTUIT_PY_TAGS"
 VALID_CHARSET = set(ascii_letters + digits + "-_./")
 INVALID_CHARSET = frozenset(map(chr, range(128))) - VALID_CHARSET
@@ -67,17 +67,17 @@ def _get_tags_from_environment():
     tags_str = tags_str.strip(", ")
     tags_split = tags_str.split(',')
     for tag in tags_split:
+        tag = tag.strip()
+        if not tag:
+            continue
         try:
-            tag = tag.strip()
-            if not tag:
-                continue
             key, val = tag.split(":")
             tags[key.strip()] = val.strip()
         except ValueError:
-            raise ValueError("Invalid format of "
+            raise ValueError("Invalid format for "
                              + APPTUIT_PY_TAGS +
                              ", failed to parse tag key-value pair '"
-                             + tag + "' format should be like"
+                             + tag + "', " + APPTUIT_PY_TAGS + " should be in the format - "
                              "'tag_key1:tag_val1,tag_key2:tag_val2,...,tag_keyN:tag_valN'")
     _validate_tags(tags)
     return tags
@@ -96,23 +96,21 @@ class Apptuit(object):
     Apptuit is the client object, encapsulating the functionalities provided by Apptuit APIs
     """
 
-    def __init__(self, token=None, api_endpoint="https://api.apptuit.ai/", debug=False):
+    def __init__(self, token=None, api_endpoint="https://api.apptuit.ai", debug=False):
         """
         Creates an apptuit client object
         Params:
             token: Token of the tenant to which we wish to connect
             api_endpoint: Apptuit API End point (including the protocol and port)
-            port: Port on which the service is running
-
         """
         self.token = token
         if not self.token:
-            self.token = os.environ.get(APPTUIT_API_TOKEN)
+            self.token = os.environ.get(APPTUIT_PY_TOKEN)
             if not self.token:
                 raise ValueError("Missing Apptuit API token, "
                                  "either pass it as a parameter or "
                                  "set as value of the environment variable '"
-                                 + APPTUIT_API_TOKEN + "'.")
+                                 + APPTUIT_PY_TOKEN + "'.")
         self.endpoint = api_endpoint
         if self.endpoint[-1] == '/':
             self.endpoint = self.endpoint[:-1]
@@ -369,13 +367,12 @@ class DataPoint(object):
 
     @tags.setter
     def tags(self, tags):
+        self._tags = None
         if tags is None:
-            self._tags = tags
             return
-        else:
-            if not isinstance(tags, dict):
-                raise ValueError("Expected a value of type dict for tags")
-            _validate_tags(tags)
+        if not isinstance(tags, dict):
+            raise ValueError("Expected a value of type dict for tags")
+        _validate_tags(tags)
         self._tags = tags
 
     @property
@@ -386,7 +383,6 @@ class DataPoint(object):
     def value(self, value):
         if isinstance(value, (int, float)):
             self._value = value
-
         elif isinstance(value, str):
             try:
                 self._value = float(value)
