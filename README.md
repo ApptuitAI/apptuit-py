@@ -41,6 +41,9 @@ The format of the value of this variable is as follows:
     ```
 The spaces after the comma and colon are optional.
 
+**Note**: Support for these variable has been added in the development version of apptuit-py and is not available
+in any of the released versions.
+
 ### Sending data
 
 There are two ways of sending the data to Apptuit. First is to use the `ApptuitReporter`
