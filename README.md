@@ -39,7 +39,7 @@ The format of the value of this variable is as follows:
     ```sh
     export APPTUIT_PY_TAGS="tag_key1: tag_val1, tag_key2: tag_val2, tag_key3: tag_val3"
     ```
-The space after the comma is optional
+The spaces after the comma and colon are optional.
 
 ### Sending data
 
