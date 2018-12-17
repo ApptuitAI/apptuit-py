@@ -19,24 +19,19 @@ def test_send_positive(mock_post):
     metric_name = "node.load_avg.1m"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     dps = []
+    client.send(dps)
     points_sent = 0
     while True:
         ts = int(time.time())
         dps.append(DataPoint(metric_name, tags, ts, random.random()))
         if len(dps) == 100:
-            try:
-                client.send(dps)
-            except ApptuitException:
-                ok_(False)
+            client.send(dps)
             dps = []
             points_sent += 100
         if points_sent > 500:
             break
     if dps:
-        try:
-            client.send(dps)
-        except ApptuitException:
-            ok_(False)
+        client.send(dps)
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_send_server_error(mock_post):
@@ -83,18 +78,10 @@ def test_invalid_chars_in_tag_keys():
     ts = int(time.time())
     with assert_raises(ValueError) as ex:
         DataPoint(metric_name, tags, ts, random.random())
-
-def test_no_tag():
-    """
-    Test for no tag keys
-    """
-    metric_name = "node.load_avg.1m"
-    ts = int(time.time())
     with assert_raises(ValueError) as ex:
-        DataPoint(metric_name, None, ts, random.random())
-    with assert_raises(ValueError) as ex:
-        DataPoint(metric_name, {}, ts, random.random())
-
+        DataPoint(metric_name, "error", ts, random.random())
+    dp = DataPoint(metric_name, None, ts, random.random())
+    assert_equals(dp.tags,None)
 
 def test_invalid_chars_in_tag_values():
     """
