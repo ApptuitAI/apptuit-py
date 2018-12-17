@@ -27,20 +27,19 @@ Supported Python versions: 2.7.x, 3.4, 3.5, 3.6, 3.7
  
 ### Configuration
 
-Apptuit package supports 2 environmental variables `APPTUIT_API_TOKEN` 
-and `APPTUIT_PY_TAGS`:
-* `APPTUIT_API_TOKEN`: If this environmental variable is set then you don't have 
-to pass token parameter to `Apptuit()` and `ApptuitReporter()`. This will work as
-a secondary token, if you pass the token to `Apptuit()` and `ApptuitReporter()` 
-then that token will take priority.
-* `APPTUIT_PY_TAGS`: If this environmental variable is set then these tags will 
-act as global tags, and these tags will be sent in all send api calls. The tags
-have to be specified in key value pair as follows:
+Apptuit supports two environmental variables `APPTUIT_PY_TOKEN` and `APPTUIT_PY_TAGS`:
+
+* `APPTUIT_PY_TOKEN`: This can be used to set the Apptuit API token. If set, then we don't
+need to pass the token as a parameter when working with the apptuit client or the apptuit reporter.
+* `APPTUIT_PY_TAGS`: This can be used to set the global tags for apptuit. The apptuit client and reporter
+will add these tags with each datapoint they are sending to Apptuit. These tags will work in combination
+with any tags set with the reporter as well as set with indivual metrics and datapoints. If any metric
+shares a tag key in common with the global tags, the value of the tag from the metric takes preference.
+The format of the value of this variable is as follows:
+    ```sh
+    export APPTUIT_PY_TAGS="tag_key1: tag_val1, tag_key2: tag_val2, tag_key3: tag_val3"
     ```
-    APPTUIT_PY_TAGS: tag_key1: tag_val1, tag_key2: tag_val2 ,..., tag_keyN: tag_valN
-    ```
-    If tag key in environmental variable matches tag key to `DataPoint` then 
-    `DataPoint` tags take priority.
+The space after the comma is optional
 
 ### Sending data
 
