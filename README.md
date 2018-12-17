@@ -33,7 +33,7 @@ Apptuit supports two environmental variables `APPTUIT_PY_TOKEN` and `APPTUIT_PY_
 need to pass the token as a parameter when working with the apptuit client or the apptuit reporter.
 * `APPTUIT_PY_TAGS`: This can be used to set the global tags for apptuit. The apptuit client and reporter
 will add these tags with each datapoint they are sending to Apptuit. These tags will work in combination
-with any tags set with the reporter as well as set with indivual metrics and datapoints. If any metric
+with any tags set with the reporter as well as set with individual metrics and datapoints. If any metric
 shares a tag key in common with the global tags, the value of the tag from the metric takes preference.
 The format of the value of this variable is as follows:
     ```sh
