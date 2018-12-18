@@ -102,3 +102,18 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+*.iml
+*.xml
+*.xml
+*.xml
+.idea/vcs.xml
+*.xml___jb_tmp___
+simple.py
+*.h
+mypython/Scripts/activate
+mypython/Scripts/activate.bat
+mypython/Scripts/activate_this.py
+mypython/Scripts/activate.ps1
+mypython/Scripts/deactivate.bat
+apptuit/__init__.py
+setup.py
