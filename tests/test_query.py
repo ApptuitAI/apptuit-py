@@ -19,6 +19,15 @@ def get_mock_response():
     with open('tests/response.json') as f:
         return f.readlines()[0]
 
+def test_api_endpoint_param():
+    """
+        Test the api_endpoint param of apptuit client
+    """
+    _ = Apptuit(token="test_token", api_endpoint="https://api.apptuit.ai/")
+    with assert_raises(ValueError):
+        _ = Apptuit(token="test_token", api_endpoint=None)
+        _ = Apptuit(token="test_token", api_endpoint="")
+
 def do_query(mock_get):
     """
     Execute the query API and return the mock response

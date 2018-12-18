@@ -79,6 +79,9 @@ class Apptuit(object):
                                  "either pass it as a parameter or "
                                  "set as value of the environment variable '"
                                  + APPTUIT_PY_TOKEN + "'.")
+        if not api_endpoint:
+            raise ValueError("Invalid value for the 'api_endpoint' parameter")
+
         self.endpoint = api_endpoint
         if self.endpoint[-1] == '/':
             self.endpoint = self.endpoint[:-1]
