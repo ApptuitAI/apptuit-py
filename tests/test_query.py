@@ -26,6 +26,7 @@ def test_api_endpoint_param():
     _ = Apptuit(token="test_token", api_endpoint="https://api.apptuit.ai/")
     with assert_raises(ValueError):
         _ = Apptuit(token="test_token", api_endpoint=None)
+    with assert_raises(ValueError):       
         _ = Apptuit(token="test_token", api_endpoint="")
 
 def do_query(mock_get):
