@@ -65,7 +65,6 @@ the various metrics we refer you to the [Pyformance documentation](https://githu
 ```python
 import socket
 from pyformance import MetricsRegistry
-from apptuit import timeseries
 from apptuit.pyformance.apptuit_reporter import ApptuitReporter
 
 class OrderService:
@@ -255,6 +254,7 @@ creating them every time:
 import socket
 import time
 from apptuit import timeseries
+from apptuit.pyformance import ApptuitReporter
 from pyformance import MetricsRegistry
 
 class OrderService:
@@ -304,7 +304,8 @@ It also ensures that we will report separate time-series for order-counts of dif
 #### Sending data using send() API
 
 Apart from using the Pyformance reporter, you can also use the low level `send()` API from the apptuit
-client to directly send the data.
+client to directly send the data. If you want tags while sending you can use the global_tags
+parameter of Apptuit class. If global_tags are set then environmental tags will not be used.
 
 ```python
 from apptuit import Apptuit, DataPoint

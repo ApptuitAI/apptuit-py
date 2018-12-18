@@ -8,8 +8,7 @@ import os
 from nose.tools import assert_equals, assert_raises
 from pyformance import MetricsRegistry
 
-from apptuit.apptuit_client import APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
-from apptuit import apptuit_client, Apptuit, DataPoint
+from apptuit import apptuit_client, Apptuit, DataPoint, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
 from apptuit.pyformance import ApptuitReporter
 
 try:
@@ -38,8 +37,8 @@ def test_tags_env_variable_parsing_negative():
         Test that we fail when the value of global tags env variable is in an invalid format
     """
     test_cases = [
-        '"tagk1":tagv1',
-        'tagk1:tagv11:tagv12',
+        '"tagk1": tagv1',
+        'tagk1: tagv11: tagv12',
         'tag',
         '  tagk1 : 22,error,tagk2  : tagv2  ',
         '  tagk1 : 22,tagk1:tagv11:tagv12,tagk2  : tagv2  '
@@ -91,13 +90,13 @@ def test_env_global_tags_positive():
                                            APPTUIT_PY_TAGS: 'tagk1: 22, tagk2: tagv2'})
     mock_environ.start()
     client = Apptuit()
-    assert_equals(client._environ_tags, {"tagk1": "22", "tagk2": "tagv2"})
+    assert_equals(client._global_tags, {"tagk1": "22", "tagk2": "tagv2"})
     mock_environ.stop()
 
     mock_environ = patch.dict(os.environ, {APPTUIT_PY_TOKEN: "environ_token"})
     mock_environ.start()
-    client = Apptuit()
-    assert_equals({}, client._environ_tags)
+    client1 = Apptuit()
+    assert_equals({}, client1._global_tags)
     mock_environ.stop()
 
 def test_env_global_tags_negative():
@@ -138,7 +137,7 @@ def test_datapoint_tags_and_envtags():
     assert_equals(payload[1]["tags"], {"host": "host1", "ip": "1.1.1.1", "test": 2})
     assert_equals(payload[2]["tags"], {"host": "host1", "ip": "1.1.1.1"})
     assert_equals(payload[3]["tags"], {"host": "host1", "ip": "1.1.1.1"})
-    assert_equals(client._environ_tags, {"host": "host1", "ip": "1.1.1.1"})
+    assert_equals(client._global_tags, {"host": "host1", "ip": "1.1.1.1"})
     mock_environ.stop()
 
 def test_no_environ_tags():

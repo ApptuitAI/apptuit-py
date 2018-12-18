@@ -1,11 +1,12 @@
 """
     Tests for apptuit pyformance reporter
 """
+import os
 import random
 import time
 from nose.tools import assert_raises, assert_equals, assert_greater_equal, assert_true
 from requests.exceptions import HTTPError
-from apptuit import ApptuitException
+from apptuit import ApptuitException, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
 from apptuit.pyformance.apptuit_reporter import ApptuitReporter
 from pyformance import MetricsRegistry
 
@@ -195,6 +196,21 @@ def test_no_token():
         ApptuitReporter(registry=registry,
                         reporting_interval=1,
                         prefix="apr.")
+
+def test_reporter_tags():
+    """
+    Test that reporter tags are working as expected
+    """
+    mock_environ = patch.dict(os.environ, {APPTUIT_PY_TOKEN: "environ_token",
+                                           APPTUIT_PY_TAGS: 'host: environ, ip: 1.1.1.1'})
+    mock_environ.start()
+    reporter = ApptuitReporter(tags={"host": "reporter", "ip": "2.2.2.2"})
+    assert_equals(reporter.tags, {"host": "reporter", "ip": "2.2.2.2"})
+    reporter = ApptuitReporter()
+    assert_equals(reporter.tags, {"host": "environ", "ip": "1.1.1.1"})
+    reporter = ApptuitReporter(tags={"test": "val"})
+    assert_equals(reporter.tags, {"host": "environ", "ip": "1.1.1.1", "test":"val"})
+    mock_environ.stop()
 
 def test_collect_data_points():
     """

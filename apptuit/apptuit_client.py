@@ -5,7 +5,9 @@ Client module for Apptuit APIs
 import os
 from collections import defaultdict
 import json
-from string import ascii_letters, digits
+from apptuit.utils import _contains_valid_chars, _get_tags_from_environment, _validate_tags
+from apptuit import APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
+
 try:
     from urllib import quote
 except ImportError:
@@ -16,13 +18,6 @@ import zlib
 import requests
 import pandas as pd
 
-APPTUIT_PY_TOKEN = "APPTUIT_PY_TOKEN"
-APPTUIT_PY_TAGS = "APPTUIT_PY_TAGS"
-VALID_CHARSET = set(ascii_letters + digits + "-_./")
-INVALID_CHARSET = frozenset(map(chr, range(128))) - VALID_CHARSET
-
-def _contains_valid_chars(string):
-    return INVALID_CHARSET.isdisjoint(string)
 
 def _generate_query_string(query_string, start, end):
     ret = "?start=" + str(start)
@@ -59,49 +54,22 @@ def _parse_response(resp, start, end=None):
             qresult[output_id].series.append(series)
     return qresult
 
-def _get_tags_from_environment():
-    tags_str = os.environ.get(APPTUIT_PY_TAGS)
-    if not tags_str:
-        return {}
-    tags = {}
-    tags_str = tags_str.strip(", ")
-    tags_split = tags_str.split(',')
-    for tag in tags_split:
-        tag = tag.strip()
-        if not tag:
-            continue
-        try:
-            key, val = tag.split(":")
-            tags[key.strip()] = val.strip()
-        except ValueError:
-            raise ValueError("Invalid format for "
-                             + APPTUIT_PY_TAGS +
-                             ", failed to parse tag key-value pair '"
-                             + tag + "', " + APPTUIT_PY_TAGS + " should be in the format - "
-                             "'tag_key1:tag_val1,tag_key2:tag_val2,...,tag_keyN:tag_valN'")
-    _validate_tags(tags)
-    return tags
-
-def _validate_tags(tags):
-    for tagk, tagv in tags.items():
-        if not _contains_valid_chars(tagk):
-            raise ValueError("Tag key %s contains an invalid character, "
-                             "allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagk)
-        if not _contains_valid_chars(str(tagv)):
-            raise ValueError("Tag value %s contains an invalid character, "
-                             "allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagv)
-
 class Apptuit(object):
     """
     Apptuit is the client object, encapsulating the functionalities provided by Apptuit APIs
     """
 
-    def __init__(self, token=None, api_endpoint="https://api.apptuit.ai", debug=False):
+    def __init__(self, token=None, api_endpoint="https://api.apptuit.ai",
+                 global_tags=None, ignore_environ_tags=False, debug=False):
         """
         Creates an apptuit client object
         Params:
             token: Token of the tenant to which we wish to connect
             api_endpoint: Apptuit API End point (including the protocol and port)
+            global_tags: Tags for all datapoints (should be a dict),if you pass
+                    global_tags, environmental tags will not be used,
+                    even if ignore_environ_tags is false.
+            ignore_environ_tags: A boolean value to include environmental variable or not
         """
         self.token = token
         if not self.token:
@@ -111,22 +79,28 @@ class Apptuit(object):
                                  "either pass it as a parameter or "
                                  "set as value of the environment variable '"
                                  + APPTUIT_PY_TOKEN + "'.")
+        if not api_endpoint:
+            raise ValueError("Invalid value for the 'api_endpoint' parameter")
+
         self.endpoint = api_endpoint
         if self.endpoint[-1] == '/':
             self.endpoint = self.endpoint[:-1]
         self.debug = debug
-        self._environ_tags = _get_tags_from_environment()
+        self._global_tags = global_tags
+        if not self._global_tags and not ignore_environ_tags:
+            self._global_tags = _get_tags_from_environment()
+
 
     def _create_payload(self, datapoints):
         data = []
         for dp in datapoints:
-            if dp.tags and self._environ_tags:
-                tags = self._environ_tags.copy()
+            if dp.tags and self._global_tags:
+                tags = self._global_tags.copy()
                 tags.update(dp.tags)
             elif dp.tags:
                 tags = dp.tags
             else:
-                tags = self._environ_tags
+                tags = self._global_tags
             if not tags:
                 raise ValueError("Missing tags for the metric "
                                  + dp.metric +
