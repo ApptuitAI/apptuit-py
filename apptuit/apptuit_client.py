@@ -2,6 +2,7 @@
 Client module for Apptuit APIs
 """
 
+import os
 from collections import defaultdict
 import json
 from string import ascii_letters, digits
@@ -15,24 +16,13 @@ import zlib
 import requests
 import pandas as pd
 
+APPTUIT_PY_TOKEN = "APPTUIT_PY_TOKEN"
+APPTUIT_PY_TAGS = "APPTUIT_PY_TAGS"
 VALID_CHARSET = set(ascii_letters + digits + "-_./")
 INVALID_CHARSET = frozenset(map(chr, range(128))) - VALID_CHARSET
 
 def _contains_valid_chars(string):
     return INVALID_CHARSET.isdisjoint(string)
-
-
-def _create_payload(datapoints):
-    data = []
-    for dp in datapoints:
-        row = {}
-        row["metric"] = dp.metric
-        row["timestamp"] = dp.timestamp
-        row["value"] = dp.value
-        row["tags"] = dp.tags
-        data.append(row)
-    return data
-
 
 def _generate_query_string(query_string, start, end):
     ret = "?start=" + str(start)
@@ -69,27 +59,89 @@ def _parse_response(resp, start, end=None):
             qresult[output_id].series.append(series)
     return qresult
 
+def _get_tags_from_environment():
+    tags_str = os.environ.get(APPTUIT_PY_TAGS)
+    if not tags_str:
+        return {}
+    tags = {}
+    tags_str = tags_str.strip(", ")
+    tags_split = tags_str.split(',')
+    for tag in tags_split:
+        tag = tag.strip()
+        if not tag:
+            continue
+        try:
+            key, val = tag.split(":")
+            tags[key.strip()] = val.strip()
+        except ValueError:
+            raise ValueError("Invalid format for "
+                             + APPTUIT_PY_TAGS +
+                             ", failed to parse tag key-value pair '"
+                             + tag + "', " + APPTUIT_PY_TAGS + " should be in the format - "
+                             "'tag_key1:tag_val1,tag_key2:tag_val2,...,tag_keyN:tag_valN'")
+    _validate_tags(tags)
+    return tags
+
+def _validate_tags(tags):
+    for tagk, tagv in tags.items():
+        if not _contains_valid_chars(tagk):
+            raise ValueError("Tag key %s contains an invalid character, "
+                             "allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagk)
+        if not _contains_valid_chars(str(tagv)):
+            raise ValueError("Tag value %s contains an invalid character, "
+                             "allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagv)
+
 class Apptuit(object):
     """
     Apptuit is the client object, encapsulating the functionalities provided by Apptuit APIs
     """
 
-    def __init__(self, token, api_endpoint="https://api.apptuit.ai/", debug=False):
+    def __init__(self, token=None, api_endpoint="https://api.apptuit.ai", debug=False):
         """
         Creates an apptuit client object
         Params:
             token: Token of the tenant to which we wish to connect
             api_endpoint: Apptuit API End point (including the protocol and port)
-            port: Port on which the service is running
-
         """
-        if not token:
-            raise ValueError("Invalid token")
         self.token = token
+        if not self.token:
+            self.token = os.environ.get(APPTUIT_PY_TOKEN)
+            if not self.token:
+                raise ValueError("Missing Apptuit API token, "
+                                 "either pass it as a parameter or "
+                                 "set as value of the environment variable '"
+                                 + APPTUIT_PY_TOKEN + "'.")
         self.endpoint = api_endpoint
         if self.endpoint[-1] == '/':
             self.endpoint = self.endpoint[:-1]
         self.debug = debug
+        self._environ_tags = _get_tags_from_environment()
+
+    def _create_payload(self, datapoints):
+        data = []
+        for dp in datapoints:
+            if dp.tags and self._environ_tags:
+                tags = self._environ_tags.copy()
+                tags.update(dp.tags)
+            elif dp.tags:
+                tags = dp.tags
+            else:
+                tags = self._environ_tags
+            if not tags:
+                raise ValueError("Missing tags for the metric "
+                                 + dp.metric +
+                                 ". Either pass it as value of the tags"
+                                 " parameter to DataPoint or"
+                                 " set environment variable '"
+                                 + APPTUIT_PY_TAGS +
+                                 "' for global tags")
+            row = {}
+            row["metric"] = dp.metric
+            row["timestamp"] = dp.timestamp
+            row["value"] = dp.value
+            row["tags"] = tags
+            data.append(row)
+        return data
 
     def send(self, datapoints):
         """
@@ -98,8 +150,10 @@ class Apptuit(object):
             datapoints: A list of DataPoint objects
         It raises an ApptuitException in case the backend API responds with an error
         """
+        if not datapoints:
+            return
         url = self.endpoint + "/api/put?sync&sync=60000"
-        data = _create_payload(datapoints)
+        data = self._create_payload(datapoints)
         body = json.dumps(data)
         body = zlib.compress(body.encode("utf-8"))
         headers = {}
@@ -203,17 +257,8 @@ class TimeSeries(object):
     def tags(self, tags):
         if not isinstance(tags, dict):
             raise ValueError("tags parameter is expected to be a dict type")
-        for tagk, tagv in tags.items():
-            if not _contains_valid_chars(tagk):
-                raise ValueError("tag key %s contains a character which is not allowed, "
-                                 "only characters [a-z], [A-Z], [0-9] and [-_./] are allowed"
-                                 % (tagk))
-            if not _contains_valid_chars(str(tagv)):
-                raise ValueError("tag value %s contains a character which is not allowed, "
-                                 "only characters [a-z], [A-Z], [0-9] and [-_./] are allowed"
-                                 % (tagv))
+        _validate_tags(tags)
         self._tags = tags
-
 
     def __repr__(self):
         repr_str = '%s{' % self.metric
@@ -300,8 +345,6 @@ class DataPoint(object):
             timestamp: Number of seconds since Unix epoch
             value: value of the metric at this timestamp (int or float)
         """
-        if tags is None or tags == {}:
-            raise ValueError("Ivalid tags: Metric: "+metric+" need minimum one tag.")
         self.metric = metric
         self.tags = tags
         self.timestamp = timestamp
@@ -324,15 +367,12 @@ class DataPoint(object):
 
     @tags.setter
     def tags(self, tags):
+        self._tags = None
+        if tags is None:
+            return
         if not isinstance(tags, dict):
             raise ValueError("Expected a value of type dict for tags")
-        for tagk, tagv in tags.items():
-            if not _contains_valid_chars(tagk):
-                raise ValueError("Tag key %s contains an invalid character, "
-                                 "allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagk)
-            if not _contains_valid_chars(str(tagv)):
-                raise ValueError("Tag value %s contains an invalid character, "
-                                 "allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagv)
+        _validate_tags(tags)
         self._tags = tags
 
     @property
@@ -343,7 +383,6 @@ class DataPoint(object):
     def value(self, value):
         if isinstance(value, (int, float)):
             self._value = value
-
         elif isinstance(value, str):
             try:
                 self._value = float(value)

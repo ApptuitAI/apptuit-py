@@ -7,7 +7,7 @@
 ## Installation
 
 ```
-pip install apptuit
+pip install apptuit --upgrade
 ```
 
 ## Dependencies
@@ -19,10 +19,30 @@ Supported Python versions: 2.7.x, 3.4, 3.5, 3.6, 3.7
 ## Usage
 
 ### Contents
+ - [Configuration](#configuration)
  - [Sending Data](#sending-data)
    * [Sending Data using ApptuitReporter](#sending-the-data-using-apptuitreporter)
    * [Sending Data using `send()` API](#sending-data-using-send-api)
  - [Querying for Data](#querying-for-data)
+ 
+### Configuration
+
+Apptuit supports two environmental variables `APPTUIT_PY_TOKEN` and `APPTUIT_PY_TAGS`:
+
+* `APPTUIT_PY_TOKEN`: This can be used to set the Apptuit API token. If set, then we don't
+need to pass the token as a parameter when working with the apptuit client or the apptuit reporter.
+* `APPTUIT_PY_TAGS`: This can be used to set the global tags for apptuit. The apptuit client and reporter
+will add these tags with each datapoint they are sending to Apptuit. These tags will work in combination
+with any tags set with the reporter as well as set with individual metrics and datapoints. If any metric
+shares a tag key in common with the global tags, the value of the tag from the metric takes preference.
+The format of the value of this variable is as follows:
+    ```sh
+    export APPTUIT_PY_TAGS="tag_key1: tag_val1, tag_key2: tag_val2, tag_key3: tag_val3"
+    ```
+The spaces after the comma and colon are optional.
+
+**Note**: Support for these variable has been added in the development version of apptuit-py and is not available
+in any of the released versions.
 
 ### Sending data
 
