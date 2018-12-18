@@ -1,12 +1,41 @@
+import os
 import random
 import time
+
 try:
     from unittest.mock import Mock, patch
 except ImportError:
     from mock import Mock, patch
 
 from nose.tools import assert_raises, ok_, assert_is_not_none, assert_equals
-from apptuit import Apptuit, DataPoint, ApptuitException
+from apptuit import Apptuit, DataPoint, ApptuitException, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
+
+
+def test_client_object():
+    """
+    Test that client object is working as expected with _global_tags
+    """
+    mock_environ = patch.dict(os.environ, {APPTUIT_PY_TOKEN: "environ_token",
+                                           APPTUIT_PY_TAGS: 'tagk1: 22, tagk2: tagv2'})
+    mock_environ.start()
+    client = Apptuit()
+    assert_equals(client._global_tags, {"tagk1": "22", "tagk2": "tagv2"})
+    mock_environ.stop()
+
+    mock_environ = patch.dict(os.environ, {APPTUIT_PY_TOKEN: "environ_token",
+                                           APPTUIT_PY_TAGS: 'tagk1: 22, tagk2: tagv2'})
+    mock_environ.start()
+    client = Apptuit(ignore_environ_tags=True)
+    assert_equals(client._global_tags, None)
+    mock_environ.stop()
+
+    mock_environ = patch.dict(os.environ, {APPTUIT_PY_TOKEN: "environ_token",
+                                           APPTUIT_PY_TAGS: 'tk1: tv1, tk2: tv2'})
+    mock_environ.start()
+    client = Apptuit(global_tags={"tagk1": "22", "tagk2": "tagv2"})
+    assert_equals(client._global_tags, {"tagk1": "22", "tagk2": "tagv2"})
+    mock_environ.stop()
+
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_send_positive(mock_post):

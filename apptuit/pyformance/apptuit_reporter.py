@@ -3,6 +3,7 @@ Apptuit Pyformance Reporter
 """
 from pyformance.reporters.reporter import Reporter
 from apptuit import Apptuit, DataPoint, timeseries
+from apptuit.utils import _get_tags_from_environment
 
 
 class ApptuitReporter(Reporter):
@@ -14,8 +15,13 @@ class ApptuitReporter(Reporter):
         self.endpoint = api_endpoint
         self.token = token
         self.tags = tags
+        environ_tags = _get_tags_from_environment()
+        if environ_tags:
+            if self.tags is not None:
+                environ_tags.update(self.tags)
+            self.tags = environ_tags
         self.prefix = prefix if prefix is not None else ""
-        self.client = Apptuit(token, api_endpoint)
+        self.client = Apptuit(token, api_endpoint, ignore_environ_tags=True)
         self.__decoded_metrics_cache = {}
 
     def report_now(self, registry=None, timestamp=None):
