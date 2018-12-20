@@ -19,46 +19,101 @@ Supported Python versions: 2.7.x, 3.4, 3.5, 3.6, 3.7
 ## Usage
 
 ### Contents
- - [Configuration](#configuration)
+ - [Introduction](#introduction)
+   * [Working with Apptuit Client](#working-with-apptuit-client)
+   * [Working with Apptuit Pyformance Reporter](#working-with-apptuit-pyformance-reporter)
+   * [Configuration](#configuration)
  - [Sending Data](#sending-data)
    * [Sending Data using ApptuitReporter](#sending-the-data-using-apptuitreporter)
    * [Sending Data using `send()` API](#sending-data-using-send-api)
  - [Querying for Data](#querying-for-data)
- 
-### Configuration
 
-Apptuit supports two environmental variables `APPTUIT_PY_TOKEN` and `APPTUIT_PY_TAGS`:
+### Introduction
+This package provides functionality to send timeseries data to Apptuit and also to query it.
+There are two main components 
+- The Apptuit client - provides core functionality to query and send data
+- Apptuit pyformance reporter - provides a high level abstraction on top of the client
+to make it easy for you to report metrics from your applications to Apptuit.
+It is based on Coda Hale's metrics design and implemented using and provides primitives like
+`meter`, `gauge`, `counter` to accumulate and report data.
+It uses [Pyformance](https://github.com/omergertel/pyformance/) underneath.
 
-* `APPTUIT_PY_TOKEN`: This can be used to set the Apptuit API token. If set, then we don't
-need to pass the token as a parameter when working with the apptuit client or the apptuit reporter.
-* `APPTUIT_PY_TAGS`: This can be used to set the global tags for apptuit. The apptuit client and reporter
-will add these tags with each datapoint they are sending to Apptuit. These tags will work in combination
-with any tags set with the reporter as well as set with individual metrics and datapoints. If any metric
-shares a tag key in common with the global tags, the value of the tag from the metric takes preference.
+#### Working with Apptuit Client:
+The Apptuit client object can be created as simply as the following line:
+```python
+from apptuit import Apptuit
+client = Apptuit(token=my_apptuit_token, global_tags={"service": "order-service"})
+```
+- `token`: should be your apptuit token
+- `global_tags`: should be the set of default tags you want to apply on all your data. It is an optional parameter
+
+Apart from these, the Apptuit constructor takes a couple of more optional parameters explained below:
+
+- `api_endpoint`: This should be the http endpoint for calling Apptuit apis. Normally you don't need to specify this and the default value is set to `https://api.apptuit.ai`.
+- `ignore_environ_tags`: This is False by default. It tells the client whether to look up for
+the global tags in environment variables or not. We will have more to say on this in the configuration section.
+
+The client provides two methods `query` and `send` which are described in the
+"Querying for Data" and "Sending data using send()" sections respectively
+
+#### Working with Apptuit Pyformance Reporter
+The apptuit pyformance reporter is an abstraction based on Code Hale's metrics. It provides
+high level abstractions to accumulate data in the form of metrics such as `meter`, `timer`,
+`gauge` etc. and send to Apptuit. These things are described in more detail in the reporter section,
+here we will see how to create a reporter and various parameter it supports.
+```python
+from apptuit.pyformance import ApptuitReporter
+from pyformance import MetricsRegistry
+
+reporter_tags = {"service": "order-service"}
+registry = MetricsRegistry()
+reporter = ApptuitReporter(token=my_apptuit_token,
+                           registry=registry,
+                           reporting_interval=60,
+                           tags=reporter_tags)
+
+```
+Here:
+`token`: Is your Apptuit token
+`registry`: Is an instance of MetricsRegistry (explained more in Reporter section)
+`reporting_interval`: Number of seconds to wait before reporing again
+`tags`: Tags - these tags apply to all the metrics reported through this reporter.
+
+#### Configuration
+As we saw above, we need to pass the token and global tags as parameter to the 
+Apptuit client when instantiating it. There is an alternative to set these as
+environment variables, in which case you don't need to pass them explicitly in your code.
+These variables are described below
+
+* `APPTUIT_PY_TOKEN`: If the Apptuit client and the ApptuitReporter are not passed a token parameter they look for the token in this variable.
+* `APPTUIT_PY_TAGS`: This is an alternative for the `global_tags` parameter for the Apptuit client. If the Apptuit client does not receive a value for `global_tags` parameter it checks this environment variable. Both the `global_tags` parameter
+and `APPTUIT_PY_TAGS` environment variable are strictly optional. If present the Apptuit client adds those tags to every
+point it is sending.
+
 The format of the value of this variable is as follows:
-    ```sh
-    export APPTUIT_PY_TAGS="tag_key1: tag_val1, tag_key2: tag_val2, tag_key3: tag_val3"
-    ```
+
+```sh
+export APPTUIT_PY_TAGS="tag_key1: tag_val1, tag_key2: tag_val2, tag_key3: tag_val3"
+```
 The spaces after the comma and colon are optional.
+
+The `APPTUIT_PY_TAGS` variable is also read by the `ApptuitReporter`, which combines them with its reporter tags.
+In case of a conflict of same tag keys in both sets of tags, the reporter tag take preference.
 
 **Note**: Support for these variable has been added in the development version of apptuit-py and is not available
 in any of the released versions.
 
 ### Sending data
 
-There are two ways of sending the data to Apptuit. First is to use the `ApptuitReporter`
-class which provides high level abstraction for accumulating the data in various metrics
-such as counters, timers, gauge etc. and sending them to Apptuit. The second options is to
-use the `send()` method of the Apptuit client. We will show how to use both of the options below.
-
+There are two ways of sending the data to Apptuit. First is to use the `ApptuitReporter`, and
+the second options is to use the `send()` method of the Apptuit client.
+We will show how to use both of the options below.
 
 #### Sending the data using ApptuitReporter
 
 You can use apptuit's pyformance reporter to report the data.
 `ApptuitReporter`. [Pyformance](https://github.com/omergertel/pyformance/) is a Python implementation of
-Coda Hale's Yammer metrics. It provides high level abstractions for various metrics such as
-meter, counter, gauge etc. and seamlessly sends the data to the Apptuit service. For learning about
-the various metrics we refer you to the [Pyformance documentation](https://github.com/omergertel/pyformance/blob/master/README.md).
+Coda Hale's Yammer metrics. 
 
 **Getting started with Apptuit pyformance reporter**
 
@@ -93,11 +148,8 @@ class OrderService:
 
 ```
 
-Few things worth pointing out in the above example:
-- `reporting_interval` parameter of `ApptuitReporter` is the interval in seconds at which you wish
-to report your data.
-- `tags` parameter of `ApptuitReporter` specifies the global tags for this reporter.
-Any metric reported by this reporter will have these set of tags added to them.
+One thing worth pointing out in the above example:
+
 - In `handle_order` we create a new counter `order_counter` with the metric name `order_count`. The first
 time this method is called a new counter object will be created and registered with the registry. For
 subsequent calls, that counter will get reused since internally the registry will already have a
@@ -220,9 +272,9 @@ def handle_request(request):
 
 **Tags/Metadata**
 
-When creating the ApptuitReporter, you can provide a set of global tags which will be part of all the metrics
-reported by that reporter. However, in order to provide tags specific to each metric you need to provide them when
-registering the metric with the registry. For example:
+When creating the ApptuitReporter, you can provide a set of tags (referred as reporter tags from now on)
+which will be part of all the metrics reported by that reporter. However, in order to provide tags
+specific to each metric you need to provide them when registering the metric with the registry. For example:
 
 ```python
 from apptuit import timeseries
@@ -300,6 +352,16 @@ Here we have a method `get_order_counter` which takes the `city_code` as a param
 is a local cache of counters keyed by the encoded metric names. This avoids the unnecessary overhead
 of encoding the metric name and tags every time, if we already have created a counter for that city.
 It also ensures that we will report separate time-series for order-counts of different city codes.
+
+#### Global tags, reporter tags and metric tags
+
+When using the reporter we have three sets of tags, it's better to clarify a few things about them.
+
+- `ApptuitReporter` takes a set of tags as parameter. It adds these tags to all the metrics it is reporting.
+- If the environment variable `APPTUIT_PY_TAGS` is set, the reporter takes those into account as well, however
+the tags passed to it take preference in case of a conflict because of common tag keys.
+- Each metric being reported by the reporter might also have some tags attached, in case of a conflict
+because of common tag keys, the metric tags take preference over reporter or global tags.
 
 #### Sending data using send() API
 

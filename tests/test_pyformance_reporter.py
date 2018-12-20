@@ -6,7 +6,7 @@ import random
 import time
 from nose.tools import assert_raises, assert_equals, assert_greater_equal, assert_true
 from requests.exceptions import HTTPError
-from apptuit import ApptuitException, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
+from apptuit import ApptuitSendException, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
 from apptuit.pyformance.apptuit_reporter import ApptuitReporter
 from pyformance import MetricsRegistry
 
@@ -36,7 +36,7 @@ def test_send_negative(mock_post):
         count = count + 1
         if count > 10000:
             break
-    with assert_raises(ApptuitException):
+    with assert_raises(ApptuitSendException):
         reporter.report_now()
 
 @patch('apptuit.apptuit_client.requests.post')
@@ -276,6 +276,7 @@ def test_globaltags_none():
     counter2.inc()
     dps = reporter._collect_data_points(reporter.registry)
     dps = sorted(dps, key=lambda x: x.metric)
+    assert_equals(len(dps),2)
     assert_equals(dps[0].tags, {"region": "us-west-2", "id": 1})
     assert_equals(dps[1].tags, {"region": "us-west-3", "id": 2, "new_tag": "foo"})
     assert_true(reporter.tags is None)
@@ -313,3 +314,34 @@ def test_none_prefix():
     counter1.inc()
     dps = reporter._collect_data_points(reporter.registry)
     assert_equals(dps[0].metric, "counter1.count")
+
+@patch('apptuit.apptuit_client.requests.post')
+def test_meta_metrics_of_reporter(mock_post):
+    """
+    Test that meta metrics of reporter work
+    """
+    mock_post.return_value.status_code = 200
+    token = "asdashdsauh_8aeraerf"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               reporting_interval=1,
+                               token=token,
+                               tags=tags)
+    cput = registry.counter("aaaaa")
+    cput.inc(1)
+    dps = reporter._collect_data_points(reporter.registry)
+    assert_equals(len(dps), 1)
+    assert_equals(dps[0].metric,"aaaaa.count")
+    assert_equals(dps[0].value, 1)
+    reporter.start()
+    sleep_time=3
+    time.sleep(sleep_time)
+    dps = reporter._collect_data_points(reporter._meta_metrics_registry)
+    dps = sorted(dps, key=lambda x: x.metric)
+    assert_equals(len(dps), 18)
+    assert_equals(dps[9].metric, "api_call_time.count")
+    assert_equals(dps[15].metric, "number_of_failed_points.count")
+    assert_equals(dps[16].metric, "number_of_successful_points.count")
+    assert_equals(dps[17].metric, "number_of_total_points.count")
+

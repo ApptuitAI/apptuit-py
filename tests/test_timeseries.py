@@ -1,4 +1,4 @@
-from nose.tools import assert_raises, assert_equals, assert_greater_equal
+from nose.tools import assert_raises, assert_equals
 from apptuit import timeseries
 
 def test_encode_tags():
