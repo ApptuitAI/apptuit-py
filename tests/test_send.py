@@ -8,7 +8,7 @@ except ImportError:
     from mock import Mock, patch
 
 from nose.tools import assert_raises, ok_, assert_is_not_none, assert_equals
-from apptuit import Apptuit, DataPoint, ApptuitException, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
+from apptuit import Apptuit, DataPoint, ApptuitException, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS, ApptuitSendException
 
 
 def test_client_object():
@@ -198,3 +198,13 @@ def test_nonstring_invalid_datapoint_value():
     value = object()
     with assert_raises(ValueError):
         DataPoint(metric_name, tags, ts, value)
+
+def test_apptuit_send_exception():
+    """
+    Test that ApptuitSendException str is valid
+    """
+    err = str(ApptuitSendException(
+        1, 1, [{"datapoint": "test", "error": "test_error"}]
+    ))
+    assert_equals(err, "1 errors occurred\nIn the datapoint test Error Occurred: test_error\n")
+

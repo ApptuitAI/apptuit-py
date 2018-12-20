@@ -126,7 +126,7 @@ class Apptuit(object):
         """
         if not datapoints:
             return
-        url = self.endpoint + "/api/put?sync&sync=60000"
+        url = self.endpoint + "/api/put?sync&sync=60000&details"
         data = self._create_payload(datapoints)
         body = json.dumps(data)
         body = zlib.compress(body.encode("utf-8"))
@@ -136,8 +136,8 @@ class Apptuit(object):
         headers["Content-Encoding"] = "deflate"
         response = requests.post(url, data=body, headers=headers)
         if response.status_code != 200 and response.status_code != 204:
-            raise ApptuitException("PUT request failed with response code: "
-                                   "%d and response: %s" % (response.status_code, response.content))
+            resp_json = response.json()
+            raise ApptuitSendException(resp_json["success"],resp_json["failed"],resp_json["errors"])
 
     def query(self, query_str, start, end=None, retry_count=0):
         """
@@ -375,7 +375,6 @@ class DataPoint(object):
     def __str__(self):
         return self.__repr__()
 
-
 class ApptuitException(Exception):
 
     def __init__(self, msg):
@@ -386,3 +385,21 @@ class ApptuitException(Exception):
 
     def __str__(self):
         return self.msg
+
+class ApptuitSendException(ApptuitException):
+
+    def __init__(self, success, failed, errors):
+        self.errors = errors
+        self.success = success
+        self.failed = failed
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        msg = str(self.failed) + " errors occurred\n"
+        for error in self.errors:
+            dp = error["datapoint"]
+            error_msg = error["error"]
+            msg += "In the datapoint " + str(dp) + " Error Occurred: " + str(error_msg) + '\n'
+        return msg
