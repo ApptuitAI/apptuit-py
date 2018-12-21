@@ -13,8 +13,6 @@ pip install apptuit --upgrade
 
 ## Dependencies
 
-Supported Python versions: 2.7.x, 3.4, 3.5, 3.6, 3.7
-
 **Requirements** (installed automatically if you use `pip`): pandas, numpy, requests, pyformance
 
 ## Usage
