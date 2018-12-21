@@ -136,8 +136,20 @@ class Apptuit(object):
         headers["Content-Encoding"] = "deflate"
         response = requests.post(url, data=body, headers=headers)
         if response.status_code != 200 and response.status_code != 204:
-            resp_json = response.json()
-            raise ApptuitSendException(resp_json["success"],resp_json["failed"],resp_json["errors"])
+            status_code = response.status_code
+            if status_code == 400:
+                resp_json = response.json()
+                raise ApptuitSendException(
+                    "Apptuit.send() failed, Due to %d error" % (status_code),
+                    status_code, resp_json["success"],
+                    resp_json["failed"], resp_json["errors"]
+                )
+            elif status_code == 401:
+                error = "Apptuit API token is invalid."
+            else:
+                error = "Server Error."
+            raise ApptuitSendException("Apptuit.send() failed, Due to %d error" % (status_code),
+                                       status_code, 0, len(datapoints), error)
 
     def query(self, query_str, start, end=None, retry_count=0):
         """
@@ -387,8 +399,13 @@ class ApptuitException(Exception):
         return self.msg
 
 class ApptuitSendException(ApptuitException):
-
-    def __init__(self, success, failed, errors):
+    """
+        An exception raised by Apptuit.send()
+    """
+    def __init__(self, msg, status_code, success=None, failed=None, errors=None):
+        super(ApptuitSendException, self).__init__(msg)
+        self.msg = msg
+        self.status_code = status_code
         self.errors = errors
         self.success = success
         self.failed = failed
@@ -397,9 +414,14 @@ class ApptuitSendException(ApptuitException):
         return self.__str__()
 
     def __str__(self):
-        msg = str(self.failed) + " errors occurred\n"
-        for error in self.errors:
-            dp = error["datapoint"]
-            error_msg = error["error"]
-            msg += "In the datapoint " + str(dp) + " Error Occurred: " + str(error_msg) + '\n'
+        if self.status_code == 400:
+            msg = str(self.failed) + " errors occurred\n"
+            for error in self.errors:
+                dp = error["datapoint"]
+                error_msg = error["error"]
+                msg += "In the datapoint " + str(dp) + " Error Occurred: " + str(error_msg) + '\n'
+            return msg
+        msg = "Status Code: " + str(self.status_code) + \
+              "; Failed to send " + str(self.failed) + \
+              " datapoints; Error Occured: " + self.errors + "\n"
         return msg
