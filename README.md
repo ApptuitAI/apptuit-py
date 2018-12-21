@@ -28,7 +28,7 @@ pip install apptuit --upgrade
      * [Error Handling](#error-handling)
      * [Tags/Metadata](#tagsmetadata)
      * [Meta Metrics](#meta-metrics)
-* [Sending Data using `send()` API](#sending-data-using-send-api)
+ - [Sending Data using `send()` API](#sending-data-using-send-api)
  - [Querying for Data](#querying-for-data)
 
 ### Introduction
