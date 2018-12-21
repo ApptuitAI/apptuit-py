@@ -3,6 +3,7 @@
 [![Build Status](https://www.travis-ci.org/ApptuitAI/apptuit-py.svg?branch=master)](https://www.travis-ci.org/ApptuitAI/apptuit-py)
 [![codecov](https://codecov.io/gh/ApptuitAI/apptuit-py/branch/master/graph/badge.svg)](https://codecov.io/gh/ApptuitAI/apptuit-py)
 [![PyPI](https://img.shields.io/pypi/v/apptuit.svg)](https://pypi.org/project/apptuit/)
+[![Pyversions](https://img.shields.io/pypi/pyversions/apptuit.svg?style=flat)](https://pypi.org/project/apptuit/)
 
 ## Installation
 
@@ -11,8 +12,6 @@ pip install apptuit --upgrade
 ```
 
 ## Dependencies
-
-Supported Python versions: 2.7.x, 3.4, 3.5, 3.6, 3.7
 
 **Requirements** (installed automatically if you use `pip`): pandas, numpy, requests, pyformance
 
@@ -25,7 +24,11 @@ Supported Python versions: 2.7.x, 3.4, 3.5, 3.6, 3.7
    * [Configuration](#configuration)
  - [Sending Data](#sending-data)
    * [Sending Data using ApptuitReporter](#sending-the-data-using-apptuitreporter)
-   * [Sending Data using `send()` API](#sending-data-using-send-api)
+     * [Getting started with Apptuit pyformance reporter](#getting-started-with-apptuit-pyformance-reporter)
+     * [Error Handling](#error-handling)
+     * [Tags/Metadata](#tagsmetadata)
+     * [Meta Metrics](#meta-metrics)
+ - [Sending Data using `send()` API](#sending-data-using-send-api)
  - [Querying for Data](#querying-for-data)
 
 ### Introduction
@@ -115,7 +118,7 @@ You can use apptuit's pyformance reporter to report the data.
 `ApptuitReporter`. [Pyformance](https://github.com/omergertel/pyformance/) is a Python implementation of
 Coda Hale's Yammer metrics. 
 
-**Getting started with Apptuit pyformance reporter**
+#### Getting started with Apptuit pyformance reporter
 
 ```python
 import socket
@@ -269,8 +272,83 @@ def handle_request(request):
     response_sizes.add(response.size())
 
 ```
+#### Error Handling
+While sending data from ApptuitReporter some datapoints might have errors or server errors might occur, you can 
+use the parameter error_handler to work on those errors. You cant pass any parameters to that error handler but 
+can use the python feature like closure or use partial from functools package. There is a default error handler 
+which will write the errors to stderr. If you dont want any error handling you can pass `error_handler=None` which 
+will disable default error handler.
+```python
+from apptuit.pyformance import ApptuitReporter
+from pyformance import MetricsRegistry
+import logging
+reporter_tags = {"service": "order-service"}
+registry = MetricsRegistry()
+my_apptuit_token = "token"
+#reporter with default error handler (writes to stderr)
+reporter = ApptuitReporter(token=my_apptuit_token,
+                           registry=registry,
+                           reporting_interval=60,
+                           tags=reporter_tags)
 
-**Tags/Metadata**
+#reporter without error handler
+reporter_with_no_error_handler = ApptuitReporter(
+                            token=my_apptuit_token,
+                            registry=registry,
+                            reporting_interval=60,
+                            tags=reporter_tags,
+                            error_handler=None
+                            )
+
+#reporter with custom error_handler using partial
+def custom_error_handler_partial(logger, status_code, successful, failed, errors):
+    logger.error(str(ApptuitSendException(
+        status_code, successful, failed, errors
+    )))
+from functools import partial
+logger = logging.getLogger("logger key")
+apptuit_custom_error_handler = partial(custom_error_handler_partial,logger)
+
+reporter_with_no_error_handler = ApptuitReporter(
+                            token=my_apptuit_token,
+                            registry=registry,
+                            reporting_interval=60,
+                            tags=reporter_tags,
+                            error_handler=apptuit_custom_error_handler
+                            )
+
+
+#reporter with custom error_handler using closure
+...
+import logging
+from apptuit import ApptuitSendException
+from apptuit.pyformance.apptuit_reporter import ApptuitReporter
+...
+
+class OrderService:
+    def __init__(self, apptuit_token):
+        ...
+        self.logger = logging.getLogger("OrderService")
+        ...
+
+    def init_reporter(self, token, registry):
+        ...
+        def custom_error_handler_closure(status_code, successful, failed, errors):
+            logger = self.logger
+            logger.error(str(ApptuitSendException(
+                status_code, successful, failed, errors
+            )))
+            
+        self.reporter = ApptuitReporter(...,
+                                    error_handler=custom_error_handler_closure)
+        # reporter.start() will start reporting the data asynchronously based on the reporting_interval set.
+        self.reporter.start()
+        ...
+
+
+```
+
+#### Tags/Metadata
 
 When creating the ApptuitReporter, you can provide a set of tags (referred as reporter tags from now on)
 which will be part of all the metrics reported by that reporter. However, in order to provide tags
@@ -352,6 +430,17 @@ Here we have a method `get_order_counter` which takes the `city_code` as a param
 is a local cache of counters keyed by the encoded metric names. This avoids the unnecessary overhead
 of encoding the metric name and tags every time, if we already have created a counter for that city.
 It also ensures that we will report separate time-series for order-counts of different city codes.
+
+#### Meta Metrics
+Reporter also sends a few metrics such as total data points sent, number of successful data points, 
+number of failed data points, and time for sending data points. These will be send along with the metrics
+
+```python
+NUMBER_OF_TOTAL_POINTS = "apptuit.reporter.send.total"
+NUMBER_OF_SUCCESSFUL_POINTS = "apptuit.reporter.send.successful"
+NUMBER_OF_FAILED_POINTS = "apptuit.reporter.send.failed"
+API_CALL_TIMER = "apptuit.reporter.send.time"
+```
 
 #### Global tags, reporter tags and metric tags
 

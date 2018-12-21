@@ -204,7 +204,37 @@ def test_apptuit_send_exception():
     Test that ApptuitSendException str is valid
     """
     err = str(ApptuitSendException(
-        1, 1, [{"datapoint": "test", "error": "test_error"}]
+        "test", 400, 1, 1, [{"datapoint": "test", "error": "test_error"}]
     ))
     assert_equals(err, "1 errors occurred\nIn the datapoint test Error Occurred: test_error\n")
+    err = str(ApptuitSendException(
+        "test", 401, 0, 1, "test error"
+    ))
+    assert_equals(err, "Status Code: 401; Failed to send 1 datapoints; Error Occured: test error\n")
 
+@patch('apptuit.apptuit_client.requests.post')
+def test_apptuit_send_exception_400(mock_post):
+    """
+    Test for the case when there is an error from the backend for send
+    """
+    mock_post.return_value.status_code = 400
+    mock_post.return_value.content = '{"success": 0, "failed": 1, "errors": [{"datapoint": "", "error": "test_error"}] }'
+    token = "asdashdsauh_8aeraerf"
+    client = Apptuit(token)
+    dp = DataPoint("test", {"tk": "tv"}, 123, 123)
+    dps = [dp]
+    with assert_raises(ApptuitSendException):
+        client.send(dps)
+
+@patch('apptuit.apptuit_client.requests.post')
+def test_apptuit_send_exception_401(mock_post):
+    """
+    Test for the case when there is an error from the backend for send
+    """
+    mock_post.return_value.status_code = 401
+    token = "asdashdsauh_8aeraerf"
+    client = Apptuit(token)
+    dp = DataPoint("test", {"tk": "tv"}, 123, 123)
+    dps = [dp]
+    with assert_raises(ApptuitSendException):
+        client.send(dps)
