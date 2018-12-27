@@ -446,10 +446,10 @@ The `ApptuitReporter` also reports a set of meta metrics which can be a useful i
 working as expected or not, as well as to get a sense of how many points are being sent and the latency of
 the Apptuit API. These meta metrics are described below.
 
-`apptuit.reporter.send.total` - Total number of points sent
-`apptuit.reporter.send.successful` - Number of points which were succssfully processed
-`apptuit.reporter.send.failed` - Number of points which failed
-`apptuit.reporter.send.time` - Timing stats of of the send API
+- `apptuit.reporter.send.total` - Total number of points sent
+- `apptuit.reporter.send.successful` - Number of points which were succssfully processed
+- `apptuit.reporter.send.failed` - Number of points which failed
+- `apptuit.reporter.send.time` - Timing stats of of the send API
 
 #### Global tags, reporter tags and metric tags
 
