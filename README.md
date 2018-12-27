@@ -23,9 +23,8 @@ pip install apptuit --upgrade
    * [Working with Apptuit Pyformance Reporter](#working-with-apptuit-pyformance-reporter)
    * [Configuration](#configuration)
  - [Sending Data](#sending-data)
-   * [Sending Data using ApptuitReporter](#sending-the-data-using-apptuitreporter)
-     * [Getting started with Apptuit pyformance reporter](#getting-started-with-apptuit-pyformance-reporter)
-     * [Error Handling](#error-handling)
+   * [Sending data using Apptuit pyformance reporter](#sending-data-using-apptuit-pyformance-reporter)
+     * [Error Handling in ApptuitReporter](#error-handling-in-apptuitreporter)
      * [Tags/Metadata](#tagsmetadata)
      * [Meta Metrics](#meta-metrics)
  - [Sending Data using `send()` API](#sending-data-using-send-api)
@@ -56,8 +55,9 @@ Apart from these, the Apptuit constructor takes a couple of more optional parame
 - `ignore_environ_tags`: This is False by default. It tells the client whether to look up for
 the global tags in environment variables or not. We will have more to say on this in the configuration section.
 
-The client provides two methods `query` and `send` which are described in the
-"Querying for Data" and "Sending data using send()" sections respectively
+The client provides two methods, `query` and `send`, which are described in the
+[Querying for Data](#querying-for-data) and
+[Sending data using send()](#sending-data-using-send-api) sections respectively.
 
 #### Working with Apptuit Pyformance Reporter
 The apptuit pyformance reporter is an abstraction based on Code Hale's metrics. It provides
@@ -85,13 +85,14 @@ Here:
 
 #### Configuration
 As we saw above, we need to pass the token and global tags as parameter to the 
-Apptuit client when instantiating it. There is an alternative to set these as
-environment variables, in which case you don't need to pass them explicitly in your code.
-These variables are described below
+Apptuit client when instantiating it. Alternatively you can set these as
+environment variables, so that you don't need to hard-code them in your code.
+These environment variables are described below.
 
-* `APPTUIT_PY_TOKEN`: If the Apptuit client and the ApptuitReporter are not passed a token parameter they look for the token in this variable.
+* `APPTUIT_PY_TOKEN`: If the Apptuit client and the ApptuitReporter are not passed a token parameter they look for the token in this variable. If this variable is also not set, the client will raise
+`ApptuitException` to indicate about the missing token
 * `APPTUIT_PY_TAGS`: This is an alternative for the `global_tags` parameter for the Apptuit client. If the Apptuit client does not receive a value for `global_tags` parameter it checks this environment variable. Both the `global_tags` parameter
-and `APPTUIT_PY_TAGS` environment variable are strictly optional. If present the Apptuit client adds those tags to every
+and `APPTUIT_PY_TAGS` environment variable are strictly optional. If present, the Apptuit client adds those tags to every
 point it is sending.
 
 The format of the value of this variable is as follows:
@@ -113,13 +114,7 @@ There are two ways of sending the data to Apptuit. First is to use the `ApptuitR
 the second options is to use the `send()` method of the Apptuit client.
 We will show how to use both of the options below.
 
-#### Sending the data using ApptuitReporter
-
-You can use apptuit's pyformance reporter to report the data.
-`ApptuitReporter`. [Pyformance](https://github.com/omergertel/pyformance/) is a Python implementation of
-Coda Hale's Yammer metrics. 
-
-#### Getting started with Apptuit pyformance reporter
+### Sending data using Apptuit pyformance reporter
 
 ```python
 import socket
@@ -273,26 +268,36 @@ def handle_request(request):
     response_sizes.add(response.size())
 
 ```
-#### Error Handling
-While sending data from ApptuitReporter some datapoints might have errors or server errors might occur, you can 
-use the parameter error_handler to work on those errors. You cant pass any parameters to that error handler but 
-can use the python feature like closure or use partial from functools package. There is a default error handler 
-which will write the errors to stderr. If you dont want any error handling you can pass `error_handler=None` which 
-will disable default error handler.
+#### Error Handling in ApptuitReporter
+The ApptuitReporter sends data asynchronously (unless you are explicitly using it in synchronous mode). In asynchronous
+mode it is very difficult to know if the reporter is working properly or not. To make this easier the
+`ApptuitReporter` takes an `error_handler` argument. `error_handler` is expected to be a function reference
+which takes 4 arguments. The signature of the function and the arguments are explained below:
+
 ```python
-from apptuit.pyformance import ApptuitReporter
-from pyformance import MetricsRegistry
+  def error_handler(status_code, successful_points_count, failed_points_count, errors):
+    pass
+```
+- `status_code`: The HTTP status code of the POST API call to Apptuit
+- `successful_points_count`: Number of points successfully processed
+- `failed_points_count`: Number of points which could not be processed due to errors
+- `errors`: List of error messages describing the reason of failure of each of the failed points
+
+By default, the `ApptuitReporter` registers a `default_error_handler`, which writes the errors to `stderr`.
+To override that you can pass your own error handler implementation, or if you don't wish to do anything for errors
+you can pass `None` for the `error_handler` argument.
+
+**Reporter with default error handler**
+```python
 import logging
-reporter_tags = {"service": "order-service"}
-registry = MetricsRegistry()
-my_apptuit_token = "token"
 #reporter with default error handler (writes to stderr)
 reporter = ApptuitReporter(token=my_apptuit_token,
                            registry=registry,
                            reporting_interval=60,
                            tags=reporter_tags)
-
-#reporter without error handler
+```
+**Reporter with No error handler**
+```python
 reporter_with_no_error_handler = ApptuitReporter(
                             token=my_apptuit_token,
                             registry=registry,
@@ -300,26 +305,33 @@ reporter_with_no_error_handler = ApptuitReporter(
                             tags=reporter_tags,
                             error_handler=None
                             )
+```
 
-#reporter with custom error_handler using partial
-def custom_error_handler_partial(logger, status_code, successful, failed, errors):
-    logger.error(str(ApptuitSendException(
-        status_code, successful, failed, errors
-    )))
+The error handler function by definition takes only four arguments.
+If you wish to pass extra arguments to the error handler you can use
+closures or partial functions to get around the limitation.
+
+**Passing extra argument using Partial**
+
+```python
+import logging
 from functools import partial
+
+def custom_error_handler(logger, status_code, successful, failed, errors):
+    logger.error("ApptuitReporter failed to send %d points, due to errors: %s" % (failed, str(errors)))
+
 logger = logging.getLogger("logger key")
-apptuit_custom_error_handler = partial(custom_error_handler_partial,logger)
-
-reporter_with_no_error_handler = ApptuitReporter(
-                            token=my_apptuit_token,
-                            registry=registry,
-                            reporting_interval=60,
-                            tags=reporter_tags,
-                            error_handler=apptuit_custom_error_handler
-                            )
-
-
-#reporter with custom error_handler using closure
+apptuit_custom_error_handler = partial(custom_error_handler, logger)
+reporter = ApptuitReporter(
+            token=my_apptuit_token,
+            registry=registry,
+            reporting_interval=60,
+            tags=reporter_tags,
+            error_handler=apptuit_custom_error_handler
+            )
+```
+**Passing extra argument using closure**
+```python
 ...
 import logging
 from apptuit import ApptuitSendException
@@ -334,18 +346,15 @@ class OrderService:
 
     def init_reporter(self, token, registry):
         ...
-        def custom_error_handler_closure(status_code, successful, failed, errors):
+        def apptuit_error_handler(status_code, successful, failed, errors):
             logger = self.logger
             logger.error(str(ApptuitSendException(
                 status_code, successful, failed, errors
             )))
             
         self.reporter = ApptuitReporter(...,
-                                    error_handler=custom_error_handler_closure)
-        # reporter.start() will start reporting the data asynchronously based on the reporting_interval set.
-        self.reporter.start()
+                                    error_handler=apptuit_error_handler)
         ...
-
 
 ```
 
@@ -433,15 +442,14 @@ of encoding the metric name and tags every time, if we already have created a co
 It also ensures that we will report separate time-series for order-counts of different city codes.
 
 #### Meta Metrics
-Reporter also sends a few metrics such as total data points sent, number of successful data points, 
-number of failed data points, and time for sending data points. These will be send along with the metrics
+The `ApptuitReporter` also reports a set of meta metrics which can be a useful indicator if the reporter is 
+working as expected or not, as well as to get a sense of how many points are being sent and the latency of
+the Apptuit API. These meta metrics are described below.
 
-```python
-NUMBER_OF_TOTAL_POINTS = "apptuit.reporter.send.total"
-NUMBER_OF_SUCCESSFUL_POINTS = "apptuit.reporter.send.successful"
-NUMBER_OF_FAILED_POINTS = "apptuit.reporter.send.failed"
-API_CALL_TIMER = "apptuit.reporter.send.time"
-```
+`apptuit.reporter.send.total` - Total number of points sent
+`apptuit.reporter.send.successful` - Number of points which were succssfully processed
+`apptuit.reporter.send.failed` - Number of points which failed
+`apptuit.reporter.send.time` - Timing stats of of the send API
 
 #### Global tags, reporter tags and metric tags
 
