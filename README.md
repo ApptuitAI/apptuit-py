@@ -4,6 +4,9 @@
 [![codecov](https://codecov.io/gh/ApptuitAI/apptuit-py/branch/master/graph/badge.svg)](https://codecov.io/gh/ApptuitAI/apptuit-py)
 [![PyPI](https://img.shields.io/pypi/v/apptuit.svg)](https://pypi.org/project/apptuit/)
 [![Pyversions](https://img.shields.io/pypi/pyversions/apptuit.svg?style=flat)](https://pypi.org/project/apptuit/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+
 
 ## Installation
 
