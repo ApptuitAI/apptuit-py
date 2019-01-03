@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name="apptuit",
     packages=['apptuit', 'apptuit.pyformance'],
-    version="1.0",
+    version="1.0.0",
     description="Apptuit Python Client",
     url="https://github.com/ApptuitAI/apptuit-py",
     author="Abhinav Upadhyay",
