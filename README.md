@@ -84,7 +84,7 @@ Here:
 - `token`: Is your Apptuit token
 - `registry`: Is an instance of MetricsRegistry (explained more in Reporter section)
 - `reporting_interval`: Number of seconds to wait before reporing again
-- `tags`: Tags - these tags apply to all the metrics reported through this reporter.
+- `tags`: These tags apply to all the metrics reported through this reporter.
 
 #### Configuration
 As we saw above, we need to pass the token and global tags as parameter to the 
