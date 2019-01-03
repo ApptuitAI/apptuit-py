@@ -56,20 +56,21 @@ def _parse_response(resp, start, end=None):
 
 class Apptuit(object):
     """
-    Apptuit is the client object, encapsulating the functionalities provided by Apptuit APIs
+    Apptuit client - providing APIs to send and query data from Apptuit
     """
 
     def __init__(self, token=None, api_endpoint="https://api.apptuit.ai",
                  global_tags=None, ignore_environ_tags=False, debug=False):
         """
-        Creates an apptuit client object
+        Create an apptuit client object
         Params:
-            token: Token of the tenant to which we wish to connect
+            token: Apptuit token for your tenant
             api_endpoint: Apptuit API End point (including the protocol and port)
-            global_tags: Tags for all datapoints (should be a dict),if you pass
-                    global_tags, environmental tags will not be used,
-                    even if ignore_environ_tags is false.
-            ignore_environ_tags: A boolean value to include environmental variable or not
+            global_tags: Tags for all datapoints (should be a dict). If you pass
+                    value for global_tags, the APPTUIT_PY_TAGS environment variable
+                    will not be used, even if ignore_environ_tags is false.
+            ignore_environ_tags: True/False - whether to use environment variable for
+                    global tags (APPTUIT_PY_TAGS)
         """
         self.token = token
         if not self.token:
@@ -144,7 +145,7 @@ class Apptuit(object):
                     status_code, resp_json["success"],
                     resp_json["failed"], resp_json["errors"]
                 )
-            elif status_code == 401:
+            if status_code == 401:
                 error = "Apptuit API token is invalid."
             else:
                 error = "Server Error."

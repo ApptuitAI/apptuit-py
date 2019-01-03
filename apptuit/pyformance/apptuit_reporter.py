@@ -14,16 +14,20 @@ API_CALL_TIMER = "apptuit.reporter.send.time"
 
 def default_error_handler(status_code, successful, failed, errors):
     """
-    This is a default error handler for Apptuit.send() api
-    :param status_code: response status_code of Apptuit.send()
-    :param successful: number of datapoints updated successfully
-    :param failed: number of datapoints updating failed
-    :param errors: errors in response
-    :return: None
+    This is the default error handler for the ApptuitReporter.
+    It simply writes the errors to stderr.
+    Parameters
+    ----------
+        status_code: response status_code of Apptuit.send()
+        successful: number of datapoints updated successfully
+        failed: number of datapoints updating failed
+        errors: errors in response
     """
-    sys.stderr.write(str(ApptuitSendException(
-        "Error Handler:", status_code, successful, failed, errors
-    )))
+    msg = "%d points out of %d had errors\n" \
+          "HTTP status returned from Apptuit: %d\n" \
+          "Detailed error messages: %s\n" % \
+          (failed, successful + failed, status_code, str(errors))
+    sys.stderr.write(msg)
 
 class ApptuitReporter(Reporter):
     """
@@ -90,18 +94,18 @@ class ApptuitReporter(Reporter):
                     self.client.send(dps + meta_dps)
                     self._update_counter(NUMBER_OF_SUCCESSFUL_POINTS, len(dps))
                     self._update_counter(NUMBER_OF_FAILED_POINTS, 0)
-            except ApptuitSendException as e:
-                e.success -= len(meta_dps)
-                self._update_counter(NUMBER_OF_SUCCESSFUL_POINTS, e.success)
-                self._update_counter(NUMBER_OF_FAILED_POINTS, e.failed)
+            except ApptuitSendException as exception:
+                exception.success -= len(meta_dps)
+                self._update_counter(NUMBER_OF_SUCCESSFUL_POINTS, exception.success)
+                self._update_counter(NUMBER_OF_FAILED_POINTS, exception.failed)
                 if self.error_handler:
                     self.error_handler(
-                        e.status_code,
-                        e.success,
-                        e.failed,
-                        e.errors
+                        exception.status_code,
+                        exception.success,
+                        exception.failed,
+                        exception.errors
                     )
-                raise e
+                raise exception
 
     def _get_tags(self, key):
         """
@@ -142,8 +146,7 @@ class ApptuitReporter(Reporter):
             else:
                 tags = global_tags
             for value_key in metrics[key].keys():
-                dps.append(DataPoint(metric="{0}{1}.{2}".format(self.prefix, metric_name, value_key),
-                                     tags=tags,
-                                     timestamp=timestamp,
-                                     value=metrics[key][value_key]))
+                dp = DataPoint(metric="{0}{1}.{2}".format(self.prefix, metric_name, value_key),
+                               tags=tags, timestamp=timestamp, value=metrics[key][value_key])
+                dps.append(dp)
         return dps
