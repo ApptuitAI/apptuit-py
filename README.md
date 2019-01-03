@@ -108,8 +108,8 @@ The spaces after the comma and colon are optional.
 The `APPTUIT_PY_TAGS` variable is also read by the `ApptuitReporter`, which combines them with its reporter tags.
 In case of a conflict of same tag keys in both sets of tags, the reporter tag take preference.
 
-**Note**: Support for these variable has been added in the development version of apptuit-py and is not available
-in any of the released versions.
+**Note**: Support for these variable was added in the version `1.0.0` of apptuit-py and is not available
+in any of the earlier released versions.
 
 ### Sending data
 
