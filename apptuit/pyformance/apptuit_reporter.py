@@ -26,17 +26,34 @@ def default_error_handler(status_code, successful, failed, errors):
     )))
 
 class ApptuitReporter(Reporter):
+    """
+        Pyformance based reporter for Apptuit. It provides high level
+        primitives, such as meter, counter, gauge, etc., for collecting
+        data and reports them asynchronously to Apptuit.
+    """
 
     def __init__(self, registry=None, reporting_interval=10, token=None,
                  api_endpoint="https://api.apptuit.ai", prefix="", tags=None,
                  error_handler=default_error_handler):
         """
-            :param registry: A metric registry object which contains all metrics.
-            :param reporting_interval: An integer specifying time to report.
-            :param token: A string containing Apptuit API Token.
-            :param prefix: A string containing prefix added to for all metrics.
-            :param tags: A dictionary containing tags and values included to all metrics.
-            :param error_handler: A function object refer default_error_handler for more details.
+        Parameters
+        ----------
+            registry: An instance of MetricsRegistry from pyformance. It is
+                used as a container for all the metrics. If None, a new instance will be
+                created internally
+            reporting_interval: Reporting interval in seconds
+            token: Apptuit API token
+            prefix: Optional prefix for metric names, this will be prepended to all the
+                metric names
+            tags: A dictionary of tag keys and values which will be included with
+                all the metrics reported by this reporter
+            error_handler: A function to be executed in case of errors when reporting
+                the data. If not specified, the default error handler will be used which by
+                default writes the errors to stderr. The expected signature of an error handler
+                is: error_handler(status_code, successful_points, failed_points, errors). Here
+                status_code is the HTTP status code of the failed API call, successful_points is
+                number of points processed succesfully, failed_points is number of failed points
+                and errors is a list of error messages describing reason of each failure.
         """
         super(ApptuitReporter, self).__init__(registry=registry,
                                               reporting_interval=reporting_interval)
