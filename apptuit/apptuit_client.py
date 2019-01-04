@@ -127,7 +127,7 @@ class Apptuit(object):
         """
         if not datapoints:
             return
-        url = self.endpoint + "/api/put?sync&sync=60000&details"
+        url = self.endpoint + "/api/put?details"
         data = self._create_payload(datapoints)
         body = json.dumps(data)
         body = zlib.compress(body.encode("utf-8"))
