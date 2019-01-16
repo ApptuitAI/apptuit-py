@@ -508,15 +508,11 @@ form of timeseries. In order to avoid too many API calls to Apptuit we call `sen
 
 ```python
 from apptuit import Apptuit, TimeSeries
-import time
-import random
-import socket
 
 series_list = []
 points_count = 0
 token = "mytoken"
 client = Apptuit(token=token)
-hostname = socket.gethostname()
 response_data = make_request()
 for result in response_data["results"]:
     metric_name = result["metric"]
