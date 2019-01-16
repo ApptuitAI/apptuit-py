@@ -10,7 +10,7 @@ except ImportError:
 from nose.tools import assert_is_not_none, assert_is_none, assert_equals, assert_true, assert_raises
 import pandas as pd
 import requests
-from apptuit import Apptuit, ApptuitException
+from apptuit import Apptuit, ApptuitException, apptuit_client
 
 def get_mock_response():
     """
@@ -106,8 +106,8 @@ def test_metadata(mock_get):
     expected_tags = {"host": "localhost"}
     resp = do_query(mock_get)
     series = resp[0].series[0]
-    assert_equals(series.metric, expected_series_name)
-    assert_equals(series.tags, expected_tags)
+    assert_equals(series.name.metric, expected_series_name)
+    assert_equals(series.name.tags, expected_tags)
 
 @patch('apptuit.apptuit_client.requests.get')
 def test_multiple_retries(mock_get):
@@ -197,6 +197,60 @@ def test_invalid_metric_name(mock_get):
     end = 1407609000
     with assert_raises(ValueError):
         client.query(query, start, end)
+
+@patch('apptuit.apptuit_client.requests.get')
+def test_empty_dps(mock_get):
+    """
+    Test that we get an exception if the dps array is empty in the JSON response
+    """
+    mock_get.return_value.content = '{"outputs":[{"id":"nyc:taxi:rides","result":[{ \
+                                    "metric":"nyc.taxi.rides","tags":{"host":"localhost"}, \
+                                    "aggregatedTags":[],"dps":[]}]}], \
+                                    "hints":[],"query": {"querytext":"fetch(\'nyc.taxi.rides\')", \
+                                    "startTime":1406831400, \
+                                    "startTimeHumanReadableSYS":"July 31, 2014 6:30:00 PM UTC", \
+                                    "startTimeHumanReadableIST":"August 1, 2014 12:00:00 AM IST", \
+                                    "endTime":1407609000, "endTimeHumanReadableSYS":"August 9,2014 6:30:00 PM UTC", \
+                                    "endTimeHumanReadableIST":"August 10, 2014 12:00:00 AM IST", \
+                                    "digest":"Mdt8e+HDjnGByMMJdEnTnNdUxKo=:60845", "optionsdigest":"", \
+                                    "options":"{}"},"query_stats":{"compactedRows":217, "processedRows":217, \
+                                    "dataPointsProcessed":219, "numSeries":1, "queryTimeMillis":152, \
+                                    "hbaseTimeMillis":21},"timing_diagnostics": \
+                                    [{"tag":"QUERY_EXECUTION_TOTAL_TIME", "instanceCount":1, \
+                                    "totalElapsedTimeMillis":152},{"tag":"AST_BUILD_TOTAL_TIME", \
+                                    "instanceCount":1, "totalElapsedTimeMillis":29}, \
+                                    {"tag":"AST_JYTHON_TOTAL_TIME", "instanceCount":1, \
+                                    "totalElapsedTimeMillis":29},{"tag":"STATEMENT_VALIDATION_TOTAL_TIME", \
+                                    "instanceCount":1, "totalElapsedTimeMillis":0}, \
+                                    {"tag":"PLAN_BUILDING_TOTAL_TIME", "instanceCount":1, \
+                                    "totalElapsedTimeMillis":0},{"tag":"QUERY_OPTIMIZATION_TIME", \
+                                    "instanceCount":1, "totalElapsedTimeMillis":0}, \
+                                    {"tag":"PLAN_EXECUTION_TOTAL_TIME", "instanceCount":1, \
+                                    "totalElapsedTimeMillis":106},{"tag":"SCHEMA_SERVICE_FETCH_TOTAL_TIME", \
+                                    "instanceCount":1, "totalElapsedTimeMillis":93}, \
+                                    {"tag":"DATASOURCE_FETCH_RUN_TIME", "instanceCount":2, \
+                                    "totalElapsedTimeMillis":32},{"tag":"TSD_HBASE_TIME", \
+                                    "instanceCount":2, "totalElapsedTimeMillis":21}, \
+                                    {"tag":"DATASOURCE_FETCH_DP_DECODE_TIME", "instanceCount":2, \
+                                    "totalElapsedTimeMillis":52},{"tag":"DATASOURCE_FETCH_DP_DECODE_GET_TAGS_TIME", \
+                                    "instanceCount":2, "totalElapsedTimeMillis":51}, \
+                                    {"tag":"DATASOURCE_FETCH_DP_DECODE_GET_DPS_TIME", "instanceCount":2, \
+                                    "totalElapsedTimeMillis":0},{"tag":"DATASOURCE_FETCH_DP_DECODE_CORE_PROCESSING_TIME", \
+                                    "instanceCount":4, "totalElapsedTimeMillis":0}, \
+                                    {"tag":"DATASOURCE_FETCH_DP_DECODE_DS_WAIT_TIME", "instanceCount":4, \
+                                    "totalElapsedTimeMillis":0},{"tag":"DATASOURCE_FETCH_TOTAL_TIME", \
+                                    "instanceCount":1, "totalElapsedTimeMillis":12}, \
+                                    {"tag":"PLAN_EXECUTION_JPY_REMOVE_DF_TOTAL_TIME", "instanceCount":1, \
+                                    "totalElapsedTimeMillis":17},{"tag":"RESULT_DATA_MARSHALLING_TIME", \
+                                    "instanceCount":1, "totalElapsedTimeMillis":0}]}'
+    mock_get.return_value.status_code = 200
+    token = 'sdksdk203afdsfj_sadasd3939'
+    client = Apptuit(token=token)
+    query = "fetch('nyc.taxi.rides')"
+    start = 1406831400
+    end = 1407609000
+    client.query(query, start, end)
+
 
 @patch('apptuit.apptuit_client.requests.get')
 def test_empty_output(mock_get):
@@ -497,3 +551,20 @@ def test_invalid_char_in_tag_value(mock_get):
     end = 1407609000
     with assert_raises(ValueError):
         client.query(query, start, end)
+
+def test_timeseries_obj_creation():
+    """
+        Negative test cases for TimeSeries object when either index or
+        values is missing (not both at the same time)
+    """
+    with assert_raises(ValueError):
+        apptuit_client.TimeSeries('metric', {}, values=[3.14])
+
+    with assert_raises(ValueError):
+        apptuit_client.TimeSeries('metric', {}, index=[123456])
+
+    with assert_raises(ValueError):
+        apptuit_client.TimeSeries('metric', {}, index=[123455, 123456], values=[3.14])
+
+    with assert_raises(ValueError):
+        apptuit_client.TimeSeries(metric=None, tags=None)
