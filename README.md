@@ -31,6 +31,7 @@ pip install apptuit --upgrade
      * [Tags/Metadata](#tagsmetadata)
      * [Meta Metrics](#meta-metrics)
  - [Sending Data using `send()` API](#sending-data-using-send-api)
+ - [Sending Data using `send_timeseries()` API](#sending-data-using-send_timeseries-api)
  - [Querying for Data](#querying-for-data)
 
 ### Introduction
@@ -490,6 +491,47 @@ while True:
         client.send(dps)
         dps = []
     time.sleep(60)
+```
+
+#### Sending data using send_timeseries() API
+The `send` API works with a list of DataPoint objects. Creating each DataPoint object involves validating the metric name and
+the tags. If you are creating thousands of DataPoint objects with the metric name and tags, it can quickly get very expensive.
+In order to avoid that overhead, there is an alternative `send_timeseries` API as well, which accepts a list of `TimeSeries`
+objects. This is much more convenient as you need to create a `TimeSeries` object with a metric name and tags. Thereafter
+you can add points to that timeseries object by calling its `add_point()` method. This avoids creation of DataPoint objects
+and the overhead of the tag validation.
+
+Following is an example from a scraper we run internally. We call an HTTP API, get a JSON response and send it to us in the
+form of timeseries. In order to avoid too many API calls to Apptuit we call `send_timeseries` whenever we have accumulated
+50000 or more points. Once we make a `send_timeseries` call we reset the `series_list` object to contain just the latest
+`TimeSeries` object (all the earlier series would have been sent to Apptuit).
+
+```python
+from apptuit import Apptuit, TimeSeries
+import time
+import random
+import socket
+
+series_list = []
+points_count = 0
+token = "mytoken"
+client = Apptuit(token=token)
+hostname = socket.gethostname()
+response_data = make_request()
+for result in response_data["results"]:
+    metric_name = result["metric"]
+    tags = result["tags"]
+    series = TimeSeries(metric_name, tags)
+    series_list.append(series)
+    for timestamp, value in result["values"]:
+        series.add_point(timestamp, value)
+        points_count += 1
+        if points_count >= 50000:
+            client.send_timeseries(series_list)
+            points_count = 0
+            series_list = [TimeSeries(metric_name, tags)]
+if points_count > 0:
+    client.send_timeseries(series_list)
 ```
 
 ### Querying for data
