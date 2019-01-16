@@ -383,6 +383,8 @@ def test_send_timeseries_empty(mock_post):
     client = Apptuit(token)
     series_list = []
     client.send_timeseries(series_list)
+    series1 = TimeSeries("metric", {"tagk1": "tagv1"})
+    client.send_timeseries([series1])
 
 def test_none_datapoint_value():
     """

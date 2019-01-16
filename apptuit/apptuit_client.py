@@ -169,7 +169,8 @@ class Apptuit(object):
         if not timeseries_list:
             return
         data, points_count = self._create_payload_from_timeseries(timeseries_list)
-        self.__send(data, points_count)
+        if points_count != 0:
+            self.__send(data, points_count)
 
     def __send(self, payload, points_count):
         body = json.dumps(payload)
