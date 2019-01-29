@@ -111,17 +111,16 @@ def test_invalid_chars_in_tag_keys():
     with assert_raises(AttributeError) as ex:
         DataPoint(metric=metric_name, tags="error", timestamp=ts, value=random.random())
     dp = DataPoint(metric=metric_name, tags=None, timestamp=ts, value=random.random())
-    assert_equals(dp.tags,None)
+    assert_equals(dp.tags, None)
 
 def test_invalid_chars_in_tag_values():
     """
     Test for invalid character in tag values
     """
     metric_name = "node.load_avg.1m"
-    tags = {"host": "local:host", "region": "us-east-1", "service": "web-server"}
+    tags = {"host": "local:host", "region": "us east 1", "service": "web+server"}
     ts = int(time.time())
-    with assert_raises(ValueError) as ex:
-        DataPoint(metric=metric_name, tags=tags, timestamp=ts, value=random.random())
+    DataPoint(metric=metric_name, tags=tags, timestamp=ts, value=random.random())
 
 def test_tags_not_dict():
     """
