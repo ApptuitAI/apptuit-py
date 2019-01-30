@@ -427,7 +427,7 @@ def test_tags_limit_indirect(mock_post):
     """
     Test for failure when too many tags are used indirectly (when combined with global tags)
     """
-    gtags_list =["gtk-%d:gtv-%d" % (i, i) for i in range(apptuit_client.MAX_TAGS_LIMIT // 2 + 1)]
+    gtags_list = ["gtk-%d:gtv-%d" % (i, i) for i in range(apptuit_client.MAX_TAGS_LIMIT // 2 + 1)]
     global_tags = ",".join(gtags_list)
     tags = {'tagk-%d' % i: 'tagv-%d' % i for i in range(apptuit_client.MAX_TAGS_LIMIT // 2 + 1)}
     timestamp = int(time.time())

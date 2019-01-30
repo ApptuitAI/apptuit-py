@@ -446,8 +446,7 @@ is a local cache of counters keyed by the encoded metric names. This avoids the 
 of encoding the metric name and tags every time, if we already have created a counter for that city.
 It also ensures that we will report separate time-series for order-counts of different city codes.
 
-#### Restrictions on Tags
-Following restrictions should be observed with respect to tag keys and values:
+#### Restrictions on Tags and Metric names
 - **Allowed characters in tag keys and metric names** - Tag keys are allowed to have all unicode letters but only `.`, `-`, `_`, `/` are allowed
 as special characters. No such restriction is applicable on tag values
 - **Maximum number of tags** - Apptuit currently allows upto 25 tag key-value pairs per datapoint
