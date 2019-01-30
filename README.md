@@ -448,9 +448,9 @@ It also ensures that we will report separate time-series for order-counts of dif
 
 #### Restrictions on Tags
 Following restrictions should be observed with respect to tag keys and values:
-- **Allowed characters in tag keys** - Tag keys are allowed to have all unicode characters and `.`, `-`, `_`, `/` are allowed.
-No such restriction is applicable on tag values
-- **Maximum number of tags** - Apptuit currently allows upto 25 tag key-value pairs
+- **Allowed characters in tag keys and metric names** - Tag keys are allowed to have all unicode letters but only `.`, `-`, `_`, `/` are allowed
+as special characters. No such restriction is applicable on tag values
+- **Maximum number of tags** - Apptuit currently allows upto 25 tag key-value pairs per datapoint
 
 #### Meta Metrics
 The `ApptuitReporter` also reports a set of meta metrics which can be a useful indicator if the reporter is 

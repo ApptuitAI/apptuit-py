@@ -17,6 +17,7 @@ try:
 except ImportError:
     from urllib.parse import quote
 
+MAX_TAGS_LIMIT = 25
 
 def _generate_query_string(query_string, start, end):
     ret = "?start=" + str(start)
@@ -120,6 +121,9 @@ class Apptuit(object):
                                  " set environment variable '"
                                  + APPTUIT_PY_TAGS +
                                  "' for global tags")
+            if len(tags) > MAX_TAGS_LIMIT:
+                raise ValueError("Too many tags for datapoint %s, maximum allowed number of tags "
+                                 "is %d, found %d tags" % (point, MAX_TAGS_LIMIT, len(tags)))
             row = {}
             row["metric"] = point.metric
             row["timestamp"] = point.timestamp
@@ -138,6 +142,10 @@ class Apptuit(object):
                                  "of the tags parameter to TimeSeriesName, or set environment "
                                  "variable '%s' for global tags, or pass 'global_tags' parameter "
                                  "to the apptuit_client" % (timeseries.metric, APPTUIT_PY_TAGS))
+
+            if len(tags) > MAX_TAGS_LIMIT:
+                raise ValueError("Too many tags for timeseries %s, maximum allowed number of tags "
+                                 "is %d, found %d tags" % (timeseries, MAX_TAGS_LIMIT, len(tags)))
             for timestamp, value in zip(timeseries.timestamps, timeseries.values):
                 row = {"metric": timeseries.metric,
                        "tags": tags,
