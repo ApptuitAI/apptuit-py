@@ -17,9 +17,6 @@ def _validate_tags(tags):
         if not tagk or not _contains_valid_chars(tagk):
             raise ValueError("Tag key %s contains an invalid character, "
                              "allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagk)
-        if not tagv or not _contains_valid_chars(str(tagv)):
-            raise ValueError("Tag value %s contains an invalid character, "
-                             "allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagv)
 
 def _get_tags_from_environment():
     tags_str = os.environ.get(APPTUIT_PY_TAGS)

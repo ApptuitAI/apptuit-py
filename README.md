@@ -28,7 +28,8 @@ pip install apptuit --upgrade
  - [Sending Data](#sending-data)
    * [Sending data using Apptuit pyformance reporter](#sending-data-using-apptuit-pyformance-reporter)
      * [Error Handling in ApptuitReporter](#error-handling-in-apptuitreporter)
-     * [Tags/Metadata](#tagsmetadata)
+     * [Sending Tags/Metadata](#tagsmetadata)
+     * [Restrictions on Tags](#restrictions-on-tags)
      * [Meta Metrics](#meta-metrics)
  - [Sending Data using `send()` API](#sending-data-using-send-api)
  - [Sending Data using `send_timeseries()` API](#sending-data-using-send_timeseries-api)
@@ -444,6 +445,10 @@ Here we have a method `get_order_counter` which takes the `city_code` as a param
 is a local cache of counters keyed by the encoded metric names. This avoids the unnecessary overhead
 of encoding the metric name and tags every time, if we already have created a counter for that city.
 It also ensures that we will report separate time-series for order-counts of different city codes.
+
+#### Restrictions on Tags and Metric names
+- **Allowed characters in tag keys and metric names** - Tag keys and metric names can have any unicode letters (as defined by unicode specification) and the following special characters:  `.`, `-`, `_`, `/`. However, if you are looking to follow Prometheus compliant naming ([see specification])(https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels) you should restrict them to ASCII letters, digits and  underscores only and it must match the regex `[a-zA-Z_][a-zA-Z0-9_]*`. No such restriction is applicable on tag values.
+- **Maximum number of tags** - Apptuit currently allows upto 25 tag key-value pairs per datapoint
 
 #### Meta Metrics
 The `ApptuitReporter` also reports a set of meta metrics which can be a useful indicator if the reporter is 

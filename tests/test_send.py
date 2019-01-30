@@ -9,7 +9,7 @@ except ImportError:
 
 from nose.tools import assert_raises, ok_, assert_is_not_none, assert_equals, assert_true
 from apptuit import Apptuit, DataPoint, TimeSeries, ApptuitException, APPTUIT_PY_TOKEN, \
-                    APPTUIT_PY_TAGS, ApptuitSendException
+                    APPTUIT_PY_TAGS, ApptuitSendException, apptuit_client
 
 
 def test_client_global_tags():
@@ -111,17 +111,16 @@ def test_invalid_chars_in_tag_keys():
     with assert_raises(AttributeError) as ex:
         DataPoint(metric=metric_name, tags="error", timestamp=ts, value=random.random())
     dp = DataPoint(metric=metric_name, tags=None, timestamp=ts, value=random.random())
-    assert_equals(dp.tags,None)
+    assert_equals(dp.tags, None)
 
 def test_invalid_chars_in_tag_values():
     """
     Test for invalid character in tag values
     """
     metric_name = "node.load_avg.1m"
-    tags = {"host": "local:host", "region": "us-east-1", "service": "web-server"}
+    tags = {"host": "local:host", "region": "us east 1", "service": "web+server"}
     ts = int(time.time())
-    with assert_raises(ValueError) as ex:
-        DataPoint(metric=metric_name, tags=tags, timestamp=ts, value=random.random())
+    DataPoint(metric=metric_name, tags=tags, timestamp=ts, value=random.random())
 
 def test_tags_not_dict():
     """
@@ -403,3 +402,47 @@ def test_datapoint_repr():
     expected_repr = 'metric1{tagk1:tagv1, tagk2:tagv2, timestamp: %d, value: %f}' % (timestamp, 3.14)
     assert_equals(repr(point), expected_repr)
     assert_equals(str(point), expected_repr)
+
+@patch('apptuit.apptuit_client.requests.post')
+def test_tags_limit_direct(mock_post):
+    """
+    Test for failure when too many tags are used for datapoints/series
+    """
+    tags = {'tagk-%d' % i: 'tagv-%d' % i for i in range(apptuit_client.MAX_TAGS_LIMIT + 1)}
+    timestamp = int(time.time())
+    client = Apptuit(token="test_token")
+    point1 = DataPoint("metric1", {"tagk1": "tagv1"}, timestamp, 3.14)
+    point2 = DataPoint("metric1", tags, timestamp, 3.14)
+    with assert_raises(ValueError):
+        client.send([point1, point2])
+    series1 = TimeSeries('metric1', {"tagk1": "tagv1"})
+    series1.add_point(timestamp, 3.14)
+    series2 = TimeSeries('metric1', tags)
+    series2.add_point(timestamp, 3.14)
+    with assert_raises(ValueError):
+        client.send_timeseries([series1, series2])
+
+@patch('apptuit.apptuit_client.requests.post')
+def test_tags_limit_indirect(mock_post):
+    """
+    Test for failure when too many tags are used indirectly (when combined with global tags)
+    """
+    gtags_list = ["gtk-%d:gtv-%d" % (i, i) for i in range(apptuit_client.MAX_TAGS_LIMIT // 2 + 1)]
+    global_tags = ",".join(gtags_list)
+    tags = {'tagk-%d' % i: 'tagv-%d' % i for i in range(apptuit_client.MAX_TAGS_LIMIT // 2 + 1)}
+    timestamp = int(time.time())
+    with patch.dict(os.environ, {APPTUIT_PY_TAGS: global_tags}):
+        client = Apptuit(token="test_token")
+        point1 = DataPoint("metric1", {"tagk1": "tagv1"}, timestamp, 3.14)
+        point2 = DataPoint("metric1", tags, timestamp, 3.14)
+        with assert_raises(ValueError):
+            client.send([point1, point2])
+
+    with patch.dict(os.environ, {APPTUIT_PY_TAGS: global_tags}):
+        client = Apptuit(token="test_token")
+        series1 = TimeSeries('metric1', {"tagk1": "tagv1"})
+        series1.add_point(timestamp, 3.14)
+        series2 = TimeSeries('metric1', tags)
+        series2.add_point(timestamp, 3.14)
+        with assert_raises(ValueError):
+            client.send_timeseries([series1, series2])
