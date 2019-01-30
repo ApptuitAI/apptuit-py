@@ -447,8 +447,7 @@ of encoding the metric name and tags every time, if we already have created a co
 It also ensures that we will report separate time-series for order-counts of different city codes.
 
 #### Restrictions on Tags and Metric names
-- **Allowed characters in tag keys and metric names** - Tag keys are allowed to have all unicode letters but only `.`, `-`, `_`, `/` are allowed
-as special characters. No such restriction is applicable on tag values
+- **Allowed characters in tag keys and metric names** - Tag keys and metric names can have any unicode letters (as defined by unicode specification) and the following special characters:  `.`, `-`, `_`, `/`. However, if you are looking to follow Prometheus compliant naming ([see specification])(https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels) you should restrict them to ASCII letters, digits and  underscores only and it must match the regex `[a-zA-Z_][a-zA-Z0-9_]*`. No such restriction is applicable on tag values.
 - **Maximum number of tags** - Apptuit currently allows upto 25 tag key-value pairs per datapoint
 
 #### Meta Metrics
