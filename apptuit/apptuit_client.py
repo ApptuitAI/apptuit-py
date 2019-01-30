@@ -155,39 +155,41 @@ class Apptuit(object):
                 points_count += 1
         return data, points_count
 
-    def send(self, datapoints):
+    def send(self, datapoints, timeout=60):
         """
         Send the given set of datapoints to Apptuit
         Params:
             datapoints: A list of DataPoint objects
+            timeout: Timeout (in seconds) for the HTTP request
         It raises an ApptuitSendException in case the backend API responds with an error
         """
         if not datapoints:
             return
         payload = self._create_payload_from_datapoints(datapoints)
-        self.__send(payload, len(datapoints))
+        self.__send(payload, len(datapoints), timeout)
 
-    def send_timeseries(self, timeseries_list):
+    def send_timeseries(self, timeseries_list, timeout=60):
         """
         Send a list of timeseries to Apptuit
         Parameters
         ----------
             timeseries_list: A list of TimeSeries objects
+            timeout: Timeout (in seconds) for the HTTP request
         """
         if not timeseries_list:
             return
         data, points_count = self._create_payload_from_timeseries(timeseries_list)
         if points_count != 0:
-            self.__send(data, points_count)
+            self.__send(data, points_count, timeout)
 
-    def __send(self, payload, points_count):
+    def __send(self, payload, points_count, timeout):
         body = json.dumps(payload)
         body = zlib.compress(body.encode("utf-8"))
         headers = {}
         headers["Authorization"] = "Bearer " + self.token
         headers["Content-Type"] = "application/json"
         headers["Content-Encoding"] = "deflate"
-        response = requests.post(self.put_apiurl, data=body, headers=headers, timeout=60)
+        response = requests.post(self.put_apiurl, data=body, headers=headers, timeout=timeout)
         if response.status_code != 200 and response.status_code != 204:
             status_code = response.status_code
             if status_code == 400:
@@ -204,13 +206,14 @@ class Apptuit(object):
             raise ApptuitSendException("Apptuit.send() failed, Due to %d error" % (status_code),
                                        status_code, 0, points_count, error)
 
-    def query(self, query_str, start, end=None, retry_count=0):
+    def query(self, query_str, start, end=None, retry_count=0, timeout=180):
         """
             Execute the given query on Query service
             Params:
                 query_str - The query string
                 start - the start timestamp (unix epoch in seconds)
                 end - the end timestamp (unix epoch in seconds)
+                timeout - timeout (in seconds) for the HTTP request
             Returns a QueryResult object
             Individual queried items can be accessed by indexing the result object using either
             the integer index of the metric in the query or the metric name.
@@ -230,7 +233,7 @@ class Apptuit(object):
         """
         try:
             url = self.__generate_request_url(query_str, start, end)
-            return self._execute_query(url, start, end)
+            return self._execute_query(url, start, end, timeout)
         except (requests.exceptions.HTTPError, requests.exceptions.SSLError) as e:
             if retry_count > 0:
                 time.sleep(1)
@@ -239,11 +242,11 @@ class Apptuit(object):
                 raise ApptuitException("Failed to get response from Apptuit"
                                        "query service due to exception: %s" % str(e))
 
-    def _execute_query(self, query_string, start, end):
+    def _execute_query(self, query_string, start, end, timeout):
         headers = {}
         if self.token:
             headers["Authorization"] = "Bearer " + self.token
-        hresp = requests.get(query_string, headers=headers, timeout=60)
+        hresp = requests.get(query_string, headers=headers, timeout=timeout)
         body = hresp.content
         return _parse_response(body, start, end)
 
