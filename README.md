@@ -16,7 +16,7 @@ pip install apptuit --upgrade
 
 ## Dependencies
 
-**Requirements** (installed automatically if you use `pip`): pandas, numpy, requests, pyformance
+**Requirements** (installed automatically if you use `pip`): requests, pyformance
 
 ## Usage
 
