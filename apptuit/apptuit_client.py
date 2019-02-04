@@ -8,7 +8,6 @@ from collections import defaultdict
 import json
 import warnings
 import requests
-import pandas as pd
 
 from apptuit.utils import _contains_valid_chars, _get_tags_from_environment, _validate_tags
 from apptuit import APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TOKEN
@@ -416,6 +415,7 @@ class Output(object):
         """
             Create a Pandas DataFrame from this data
         """
+        import pandas as pd
         series_names = []
         series_list = []
         for s in self.series:
