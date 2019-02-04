@@ -7,7 +7,7 @@ from .apptuit_client import Apptuit, DataPoint, ApptuitException, ApptuitSendExc
     TimeSeriesName, TimeSeries
 from apptuit import pyformance, timeseries
 
-__version__ = '1.3.0'
+__version__ = '1.4.0'
 
 __all__ = ['Apptuit', 'DataPoint', 'ApptuitException', 'TimeSeriesName', 'TimeSeries',
            'pyformance', 'timeseries', 'ApptuitSendException']
