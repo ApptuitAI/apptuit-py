@@ -230,12 +230,6 @@ def test_deprecated_tags_variable():
         with assert_raises(DeprecationWarning):
             reporter = ApptuitReporter(token="test_token", registry=registry,
                                        tags={'host': 'reporter'})
-            counter = registry.counter('counter1')
-            counter.inc(1)
-            payload = reporter.client._create_payload_from_datapoints(
-                    reporter._collect_data_points(reporter.registry))
-            assert_equals(len(payload), 1)
-            assert_equals(payload[0]["tags"], {"host": "reporter", "ip": "127.0.0.1"})
     warnings.resetwarnings()
 
 def test_deprecated_token_variable():
@@ -248,10 +242,4 @@ def test_deprecated_token_variable():
         with assert_raises(DeprecationWarning):
             reporter = ApptuitReporter(registry=registry,
                                        tags={'host': 'reporter'})
-            counter = registry.counter('counter1')
-            counter.inc(1)
-            payload = reporter.client._create_payload_from_datapoints(
-                    reporter._collect_data_points(reporter.registry))
-            assert_equals(len(payload), 1)
-            assert_equals(payload[0]["tags"], {"host": "reporter"})
     warnings.resetwarnings()

@@ -79,7 +79,8 @@ class Apptuit(object):
                 token = os.environ.get(DEPRECATED_APPTUIT_PY_TOKEN)
                 if token:
                     warnings.warn("The environment variable %s is deprecated,"
-                                  "please use %s instead" % (DEPRECATED_APPTUIT_PY_TOKEN, APPTUIT_PY_TOKEN),
+                                  "please use %s instead" %
+                                  (DEPRECATED_APPTUIT_PY_TOKEN, APPTUIT_PY_TOKEN),
                                   DeprecationWarning)
             if not token:
                 raise ValueError("Missing Apptuit API token, "
