@@ -6,11 +6,12 @@ import time
 import zlib
 from collections import defaultdict
 import json
+import warnings
 import requests
 import pandas as pd
 
 from apptuit.utils import _contains_valid_chars, _get_tags_from_environment, _validate_tags
-from apptuit import APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
+from apptuit import APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TOKEN
 
 try:
     from urllib import quote
@@ -74,6 +75,12 @@ class Apptuit(object):
         """
         if not token:
             token = os.environ.get(APPTUIT_PY_TOKEN)
+            if not token:
+                token = os.environ.get(DEPRECATED_APPTUIT_PY_TOKEN)
+                if token:
+                    warnings.warn("The environment variable %s is deprecated,"
+                                  "please use %s instead" % (DEPRECATED_APPTUIT_PY_TOKEN, APPTUIT_PY_TOKEN),
+                                  DeprecationWarning)
             if not token:
                 raise ValueError("Missing Apptuit API token, "
                                  "either pass it as a parameter or "
