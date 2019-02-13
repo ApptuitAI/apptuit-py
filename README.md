@@ -16,7 +16,7 @@ pip install apptuit --upgrade
 
 ## Dependencies
 
-**Requirements** (installed automatically if you use `pip`): pandas, numpy, requests, pyformance
+**Requirements** (installed automatically if you use `pip`): requests, pyformance
 
 ## Usage
 
@@ -94,20 +94,20 @@ Apptuit client when instantiating it. Alternatively you can set these as
 environment variables, so that you don't need to hard-code them in your code.
 These environment variables are described below.
 
-* `APPTUIT_PY_TOKEN`: If the Apptuit client and the ApptuitReporter are not passed a token parameter they look for the token in this variable. If this variable is also not set, the client will raise
+* `APPTUIT_API_TOKEN`: If the Apptuit client and the ApptuitReporter are not passed a token parameter they look for the token in this variable. If this variable is also not set, the client will raise
 `ApptuitException` to indicate about the missing token
-* `APPTUIT_PY_TAGS`: This is an alternative for the `global_tags` parameter for the Apptuit client. If the Apptuit client does not receive a value for `global_tags` parameter it checks this environment variable. Both the `global_tags` parameter
-and `APPTUIT_PY_TAGS` environment variable are strictly optional. If present, the Apptuit client adds those tags to every
+* `APPTUIT_TAGS`: This is an alternative for the `global_tags` parameter for the Apptuit client. If the Apptuit client does not receive a value for `global_tags` parameter it checks this environment variable. Both the `global_tags` parameter
+and `APPTUIT_TAGS` environment variable are strictly optional. If present, the Apptuit client adds those tags to every
 point it is sending.
 
 The format of the value of this variable is as follows:
 
 ```sh
-export APPTUIT_PY_TAGS="tag_key1: tag_val1, tag_key2: tag_val2, tag_key3: tag_val3"
+export APPTUIT_TAGS="tag_key1: tag_val1, tag_key2: tag_val2, tag_key3: tag_val3"
 ```
 The spaces after the comma and colon are optional.
 
-The `APPTUIT_PY_TAGS` variable is also read by the `ApptuitReporter`, which combines them with its reporter tags.
+The `APPTUIT_TAGS` variable is also read by the `ApptuitReporter`, which combines them with its reporter tags.
 In case of a conflict of same tag keys in both sets of tags, the reporter tag take preference.
 
 **Note**: Support for these variable was added in the version `1.0.0` of apptuit-py and is not available
@@ -465,7 +465,7 @@ the Apptuit API. These meta metrics are described below.
 When using the reporter we have three sets of tags, it's better to clarify a few things about them.
 
 - `ApptuitReporter` takes a set of tags as parameter. It adds these tags to all the metrics it is reporting.
-- If the environment variable `APPTUIT_PY_TAGS` is set, the reporter takes those into account as well, however
+- If the environment variable `APPTUIT_TAGS` is set, the reporter takes those into account as well, however
 the tags passed to it take preference in case of a conflict because of common tag keys.
 - Each metric being reported by the reporter might also have some tags attached, in case of a conflict
 because of common tag keys, the metric tags take preference over reporter or global tags.

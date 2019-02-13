@@ -3,8 +3,9 @@ utilises for apptuit
 """
 import os
 from string import ascii_letters, digits
+import warnings
 
-from apptuit import APPTUIT_PY_TAGS
+from apptuit import APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TAGS
 
 VALID_CHARSET = set(ascii_letters + digits + "-_./")
 INVALID_CHARSET = frozenset(map(chr, range(128))) - VALID_CHARSET
@@ -20,6 +21,11 @@ def _validate_tags(tags):
 
 def _get_tags_from_environment():
     tags_str = os.environ.get(APPTUIT_PY_TAGS)
+    if not tags_str:
+        tags_str = os.environ.get(DEPRECATED_APPTUIT_PY_TAGS)
+        if tags_str:
+            warnings.warn("The environment variable %s is deprecated, please use %s instead"
+                          % (DEPRECATED_APPTUIT_PY_TAGS, APPTUIT_PY_TAGS), DeprecationWarning)
     if not tags_str:
         return {}
     tags = {}

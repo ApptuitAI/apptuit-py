@@ -2,6 +2,7 @@
 Tests for the query API
 """
 
+import sys
 try:
     from unittest.mock import Mock, patch
 except ImportError:
@@ -568,3 +569,15 @@ def test_timeseries_obj_creation():
 
     with assert_raises(ValueError):
         apptuit_client.TimeSeries(metric=None, tags=None)
+
+@patch('apptuit.apptuit_client.requests.get')
+def test_missing_pandas(mock_get):
+    orig_modules = sys.modules.copy()
+    orig_pandas = orig_modules['pandas']
+    orig_modules['pandas'] = None
+    with patch.dict(sys.modules, orig_modules):
+        if orig_pandas:
+            sys.modules['pandas'] = None
+        resp = do_query(mock_get)
+        with assert_raises(ImportError):
+            resp[0].to_df()

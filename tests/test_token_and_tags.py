@@ -5,10 +5,12 @@ Tests for token and global tags environment variables
 import math
 import time
 import os
+import warnings
 from nose.tools import assert_equals, assert_raises
 from pyformance import MetricsRegistry
 
-from apptuit import apptuit_client, Apptuit, DataPoint, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
+from apptuit import apptuit_client, Apptuit, DataPoint, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS, \
+                    DEPRECATED_APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TOKEN
 from apptuit.pyformance import ApptuitReporter
 
 try:
@@ -217,3 +219,27 @@ def test_tags_of_metric_take_priority():
     assert_equals(len(payload), 1)
     assert_equals(payload[0]["tags"], {"host": "metric", "ip": "3.3.3.3"})
     mock_environ.stop()
+
+def test_deprecated_tags_variable():
+    """
+    Test that reporter and client work with the deprecated tags env variable
+    """
+    warnings.filterwarnings('error')
+    with patch.dict(os.environ, {DEPRECATED_APPTUIT_PY_TAGS: 'host: environ, ip: 127.0.0.1'}):
+        registry = MetricsRegistry()
+        with assert_raises(DeprecationWarning):
+            reporter = ApptuitReporter(token="test_token", registry=registry,
+                                       tags={'host': 'reporter'})
+    warnings.resetwarnings()
+
+def test_deprecated_token_variable():
+    """
+    Test that reporter and client work with the deprecated token env variable
+    """
+    warnings.filterwarnings('error')
+    with patch.dict(os.environ, {DEPRECATED_APPTUIT_PY_TOKEN: "test_token"}):
+        registry = MetricsRegistry()
+        with assert_raises(DeprecationWarning):
+            reporter = ApptuitReporter(registry=registry,
+                                       tags={'host': 'reporter'})
+    warnings.resetwarnings()
