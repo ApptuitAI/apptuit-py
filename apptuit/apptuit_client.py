@@ -21,6 +21,7 @@ except ImportError:
 MAX_TAGS_LIMIT = 25
 MAX_PAYLOAD_SIZE_MB = 5
 USER_AGENT = "apptuit-py-" + __version__
+BATCH_SIZE = 50000
 
 def _generate_query_string(query_string, start, end):
     ret = "?start=" + str(start)
@@ -196,35 +197,39 @@ class Apptuit(object):
         return sys.getsizeof(buf) * 1.0 / (1024 ** 2)
 
     def __send(self, payload, points_count, timeout):
-        body = json.dumps(payload)
-        body = zlib.compress(body.encode("utf-8"))
-        headers = {}
-        headers["Authorization"] = "Bearer " + self.token
-        headers["Content-Type"] = "application/json"
-        headers["Content-Encoding"] = "deflate"
-        headers["User-Agent"] = USER_AGENT
-        response = requests.post(self.put_apiurl, data=body, headers=headers, timeout=timeout)
-        if response.status_code != 200 and response.status_code != 204:
-            status_code = response.status_code
-            if status_code == 400:
-                resp_json = response.json()
-                raise ApptuitSendException(
-                    "Apptuit.send() failed, Due to %d error" % (status_code),
-                    status_code, resp_json["success"],
-                    resp_json["failed"], resp_json["errors"]
-                )
-            if status_code == 413:
-                raise ApptuitSendException("Too big payload for Apptuit.send(). Trying to send "
-                                           "%f mb of data with %d points, maximum allowed "
-                                           "payload size is %d mb" % (self.__get_size_in_mb(body),
-                                           points_count, MAX_PAYLOAD_SIZE_MB), status_code, 0,
-                                           points_count, "Payload size too big for Apptuit.send()")
-            if status_code == 401:
-                error = "Apptuit API token is invalid"
-            else:
-                error = "Server Error"
-            raise ApptuitSendException("Apptuit.send() failed, Due to %d error" % (status_code),
-                                       status_code, 0, points_count, error)
+        for i in range(0, points_count, BATCH_SIZE):
+            _payload = payload[i: i + BATCH_SIZE]
+            body = json.dumps(_payload)
+            body = zlib.compress(body.encode("utf-8"))
+            headers = {}
+            headers["Authorization"] = "Bearer " + self.token
+            headers["Content-Type"] = "application/json"
+            headers["Content-Encoding"] = "deflate"
+            headers["User-Agent"] = USER_AGENT
+            response = requests.post(self.put_apiurl, data=body, headers=headers, timeout=timeout)
+            if response.status_code != 200 and response.status_code != 204:
+                status_code = response.status_code
+                if status_code == 400:
+                    resp_json = response.json()
+                    raise ApptuitSendException(
+                        "Apptuit.send() failed, Due to %d error" % (status_code),
+                        status_code, resp_json["success"],
+                        resp_json["failed"], resp_json["errors"]
+                    )
+                if status_code == 413:
+                    raise ApptuitSendException("Too big payload for Apptuit.send(). Trying to send"
+                                               " %f mb of data with %d points, maximum allowed "
+                                               "payload size is %d mb" %
+                                               (self.__get_size_in_mb(body),
+                                               points_count, MAX_PAYLOAD_SIZE_MB), status_code, 0,
+                                               points_count,
+                                               "Payload size too big for Apptuit.send()")
+                if status_code == 401:
+                    error = "Apptuit API token is invalid"
+                else:
+                    error = "Server Error"
+                raise ApptuitSendException("Apptuit.send() failed, Due to %d error" % (status_code),
+                                        status_code, 0, points_count, error)
 
     def query(self, query_str, start, end=None, retry_count=0, timeout=180):
         """

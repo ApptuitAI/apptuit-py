@@ -10,7 +10,7 @@ except ImportError:
 from nose.tools import assert_raises, ok_, assert_is_not_none, assert_equals, assert_true
 from apptuit import Apptuit, DataPoint, TimeSeries, ApptuitException, APPTUIT_PY_TOKEN, \
                     APPTUIT_PY_TAGS, ApptuitSendException, apptuit_client
-
+from apptuit.apptuit_client import BATCH_SIZE
 
 def __get_apptuit_client():
     token = "asdashdsauh_8aeraerf"
