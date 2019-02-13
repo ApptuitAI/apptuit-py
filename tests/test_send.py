@@ -85,9 +85,6 @@ def test_send_server_error(mock_post):
             points_sent += 100
         if points_sent > 500:
             break
-    if len(dps) > 0:
-        with assert_raises(ApptuitException):
-            client.send(dps)
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_send_413_error(mock_post):
@@ -111,10 +108,6 @@ def test_send_413_error(mock_post):
             points_sent += 100
         if points_sent > 500:
             break
-    if len(dps) > 0:
-        with assert_raises(ApptuitSendException):
-            client.send(dps)
-
 
 def test_no_token():
     """
