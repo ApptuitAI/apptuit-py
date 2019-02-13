@@ -20,8 +20,11 @@ except ImportError:
 
 MAX_TAGS_LIMIT = 25
 MAX_PAYLOAD_SIZE_MB = 5
-USER_AGENT = "apptuit-py-" + __version__
 BATCH_SIZE = 50000
+
+def _get_user_agent():
+    py_version = sys.version.split()[0]
+    return "apptuit-py-" + __version__ + ", requests-" + requests.__version__ + ", Py-" + py_version
 
 def _generate_query_string(query_string, start, end):
     ret = "?start=" + str(start)
@@ -205,7 +208,7 @@ class Apptuit(object):
             headers["Authorization"] = "Bearer " + self.token
             headers["Content-Type"] = "application/json"
             headers["Content-Encoding"] = "deflate"
-            headers["User-Agent"] = USER_AGENT
+            headers["User-Agent"] = _get_user_agent()
             response = requests.post(self.put_apiurl, data=body, headers=headers, timeout=timeout)
             if response.status_code != 200 and response.status_code != 204:
                 status_code = response.status_code
@@ -269,7 +272,7 @@ class Apptuit(object):
 
     def _execute_query(self, query_string, start, end, timeout):
         headers = {}
-        headers["User-Agent"] = USER_AGENT
+        headers["User-Agent"] = _get_user_agent()
         if self.token:
             headers["Authorization"] = "Bearer " + self.token
         hresp = requests.get(query_string, headers=headers, timeout=timeout)
