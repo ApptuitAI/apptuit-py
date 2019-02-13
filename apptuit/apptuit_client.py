@@ -2,6 +2,7 @@
 Client module for Apptuit APIs
 """
 import os
+import sys
 import time
 import zlib
 from collections import defaultdict
@@ -18,6 +19,7 @@ except ImportError:
     from urllib.parse import quote
 
 MAX_TAGS_LIMIT = 25
+MAX_PAYLOAD_SIZE_MB = 5
 
 def _generate_query_string(query_string, start, end):
     ret = "?start=" + str(start)
@@ -189,6 +191,9 @@ class Apptuit(object):
         if points_count != 0:
             self.__send(data, points_count, timeout)
 
+    def __get_size_in_mb(self, buf):
+        return sys.getsizeof(buf) * 1.0 / (1024 ** 2)
+
     def __send(self, payload, points_count, timeout):
         body = json.dumps(payload)
         body = zlib.compress(body.encode("utf-8"))
@@ -206,6 +211,12 @@ class Apptuit(object):
                     status_code, resp_json["success"],
                     resp_json["failed"], resp_json["errors"]
                 )
+            if status_code == 413:
+                raise ApptuitSendException("Too big payload for Apptuit.send(). Trying to send "
+                                           "%f mb of data with %d points, maximum allowed "
+                                           "payload size is %d mb" % (self.__get_size_in_mb(body),
+                                           points_count, MAX_PAYLOAD_SIZE_MB), status_code, 0,
+                                           points_count, "Payload size too big for Apptuit.send()")
             if status_code == 401:
                 error = "Apptuit API token is invalid"
             else:

@@ -89,6 +89,33 @@ def test_send_server_error(mock_post):
         with assert_raises(ApptuitException):
             client.send(dps)
 
+@patch('apptuit.apptuit_client.requests.post')
+def test_send_413_error(mock_post):
+    """
+    Test for the case when we get 413 from the PUT API
+    """
+    mock_post.return_value.status_code = 413
+    token = "asdashdsauh_8aeraerf"
+    client = Apptuit(token)
+    metric_name = "node.load_avg.1m"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    dps = []
+    points_sent = 0
+    while True:
+        ts = int(time.time())
+        dps.append(DataPoint(metric=metric_name, tags=tags, timestamp=ts, value=random.random()))
+        if len(dps) == 100:
+            with assert_raises(ApptuitSendException):
+                client.send(dps)
+            dps = []
+            points_sent += 100
+        if points_sent > 500:
+            break
+    if len(dps) > 0:
+        with assert_raises(ApptuitSendException):
+            client.send(dps)
+
+
 def test_no_token():
     """
             Test that no token raises error
