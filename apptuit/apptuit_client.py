@@ -12,6 +12,7 @@ import requests
 
 from apptuit.utils import _contains_valid_chars, _get_tags_from_environment, _validate_tags
 from apptuit import APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TOKEN
+from apptuit import __version__
 
 try:
     from urllib import quote
@@ -20,6 +21,7 @@ except ImportError:
 
 MAX_TAGS_LIMIT = 25
 MAX_PAYLOAD_SIZE_MB = 5
+USER_AGENT = "apptuit-py-" + __version__
 
 def _generate_query_string(query_string, start, end):
     ret = "?start=" + str(start)
@@ -201,6 +203,7 @@ class Apptuit(object):
         headers["Authorization"] = "Bearer " + self.token
         headers["Content-Type"] = "application/json"
         headers["Content-Encoding"] = "deflate"
+        headers["User-Agent"] = USER_AGENT
         response = requests.post(self.put_apiurl, data=body, headers=headers, timeout=timeout)
         if response.status_code != 200 and response.status_code != 204:
             status_code = response.status_code
@@ -262,6 +265,7 @@ class Apptuit(object):
 
     def _execute_query(self, query_string, start, end, timeout):
         headers = {}
+        headers["User-Agent"] = USER_AGENT
         if self.token:
             headers["Authorization"] = "Bearer " + self.token
         hresp = requests.get(query_string, headers=headers, timeout=timeout)
