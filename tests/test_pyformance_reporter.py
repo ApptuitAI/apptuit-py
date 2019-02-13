@@ -25,6 +25,7 @@ def test_send_negative(mock_post):
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -50,6 +51,7 @@ def test_reporter_thread_active(mock_post):
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -68,6 +70,7 @@ def test_invalid_metric_name():
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr\\",
@@ -87,6 +90,7 @@ def test_invalid_tag():
     tags = {"h\\ost": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -106,6 +110,7 @@ def test_invalid_registry():
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = None
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -123,6 +128,7 @@ def test_tags_with_key(mock_post):
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -142,6 +148,7 @@ def test_tags_with_key_invalid(mock_post):
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -160,6 +167,7 @@ def test_calling_report_now():
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -178,6 +186,7 @@ def test_zero_tags():
     token = "asdashdsauh_8aeraerf"
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.")
@@ -220,6 +229,7 @@ def test_collect_data_points():
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -243,6 +253,7 @@ def test_globaltags_override():
     tags = {"region": "us-east-1"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                tags=tags)
@@ -267,6 +278,7 @@ def test_globaltags_none():
     tags = {"region": "us-east-1"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                tags=None)
@@ -289,6 +301,7 @@ def test_valid_prefix():
     tags = {"region": "us-east-1"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                prefix="pre-",
                                token=token,
@@ -306,6 +319,7 @@ def test_none_prefix():
     tags = {"region": "us-east-1"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                prefix=None,
                                token=token,
@@ -325,6 +339,7 @@ def test_meta_metrics_of_reporter(mock_post):
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                tags=tags)

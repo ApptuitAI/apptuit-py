@@ -11,8 +11,7 @@ import warnings
 import requests
 
 from apptuit.utils import _contains_valid_chars, _get_tags_from_environment, _validate_tags
-from apptuit import APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TOKEN
-from apptuit import __version__
+from apptuit import APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TOKEN, __version__
 
 try:
     from urllib import quote

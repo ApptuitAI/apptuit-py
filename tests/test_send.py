@@ -12,6 +12,10 @@ from apptuit import Apptuit, DataPoint, TimeSeries, ApptuitException, APPTUIT_PY
                     APPTUIT_PY_TAGS, ApptuitSendException, apptuit_client
 
 
+def __get_apptuit_client():
+    token = "asdashdsauh_8aeraerf"
+    return Apptuit(token, api_endpoint="http://localhost")
+
 def test_client_global_tags():
     """
     Test that client object is working as expected with _global_tags
@@ -44,8 +48,7 @@ def test_send_positive(mock_post):
     Test that send API is working as expected
     """
     mock_post.return_value.status_code = 204
-    token = "asdashdsauh_8aeraerf"
-    client = Apptuit(token)
+    client = __get_apptuit_client()
     metric_name = "node.load_avg.1m"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     dps = []
@@ -70,7 +73,7 @@ def test_send_server_error(mock_post):
     """
     mock_post.return_value.status_code = 500
     token = "asdashdsauh_8aeraerf"
-    client = Apptuit(token)
+    client = __get_apptuit_client()
     metric_name = "node.load_avg.1m"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     dps = []
@@ -93,7 +96,7 @@ def test_send_413_error(mock_post):
     """
     mock_post.return_value.status_code = 413
     token = "asdashdsauh_8aeraerf"
-    client = Apptuit(token)
+    client = __get_apptuit_client()
     metric_name = "node.load_avg.1m"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     dps = []
@@ -240,7 +243,7 @@ def test_apptuit_send_exception_400(mock_post):
     mock_post.return_value.status_code = 400
     mock_post.return_value.content = '{"success": 0, "failed": 1, "errors": [{"datapoint": "", "error": "test_error"}] }'
     token = "asdashdsauh_8aeraerf"
-    client = Apptuit(token)
+    client = __get_apptuit_client()
     dp = DataPoint(metric="test", tags={"tk": "tv"}, timestamp=123, value=123)
     dps = [dp]
     with assert_raises(ApptuitSendException):
@@ -253,7 +256,7 @@ def test_apptuit_send_exception_401(mock_post):
     """
     mock_post.return_value.status_code = 401
     token = "asdashdsauh_8aeraerf"
-    client = Apptuit(token)
+    client = __get_apptuit_client()
     dp = DataPoint(metric="test", tags={"tk": "tv"}, timestamp=123, value=123)
     dps = [dp]
     with assert_raises(ApptuitSendException):
@@ -264,7 +267,7 @@ def test_timeseries_payload():
     Test payload from timeseries list
     """
     token = "asdashdsauh_8aeraerf"
-    client = Apptuit(token)
+    client = __get_apptuit_client()
     series_list = []
     tags1 = {"tagk1": "tagv1", "tagk2": "tagv2"}
     tags2 = {"tagk3": "tagv3"}
@@ -291,7 +294,7 @@ def test_timeseries_payload_negative():
     Negative tests for payload creation from timeseries list
     """
     token = "asdashdsauh_8aeraerf"
-    client = Apptuit(token)
+    client = __get_apptuit_client()
     series_list = []
     metric1_name = 'metric1'
     metrics2_name = "metric2"
@@ -344,7 +347,7 @@ def test_timeseries_payload_with_envtags():
     global_tags = "gtagk1:gtagv1"
     mock_environ = patch.dict(os.environ, {APPTUIT_PY_TAGS: global_tags})
     mock_environ.start()
-    client = Apptuit(token)
+    client = __get_apptuit_client()
     series_list = []
     metric1_name = 'metric1'
     metric2_name = "metric2"
@@ -375,7 +378,7 @@ def test_send_timeseries(mock_post):
     """
     mock_post.return_value.status_code = 204
     token = "asdashdsauh_8aeraerf"
-    client = Apptuit(token)
+    client = __get_apptuit_client()
     series_list = []
     tags1 = {"tagk1": "tagv1", "tagk2": "tagv2"}
     tags2 = {"tagk3": "tagv3"}
@@ -399,7 +402,7 @@ def test_send_timeseries_empty(mock_post):
     """
     mock_post.return_value.status_code = 204
     token = "asdashdsauh_8aeraerf"
-    client = Apptuit(token)
+    client = __get_apptuit_client()
     series_list = []
     client.send_timeseries(series_list)
     series1 = TimeSeries("metric", {"tagk1": "tagv1"})
