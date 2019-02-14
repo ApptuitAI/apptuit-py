@@ -16,7 +16,10 @@ pip install apptuit --upgrade
 
 ## Dependencies
 
-**Requirements** (installed automatically if you use `pip`): requests, pyformance
+**Requirements**
+  - `requests`, `pyformance` - installed automatically if you use `pip` to install apptuit
+  - `pandas` - not installed by default, you should install it manually if you intend to use the `query` API and
+  create dataframes using the `to_df()` method (see [Querying for Data](#querying-for-data))
 
 ## Usage
 
@@ -549,5 +552,7 @@ query_res = apptuit.query("fetch('proc.cpu.percent').downsample('1m', 'avg')", s
 df = query_res[0].to_df()
 # Another way of creating the DF is accessing by the metric name in the query
 another_df = query_res['proc.cpu.percent'].to_df()
-
 ```
+It should be noted that using the `to_df()` method requires that you have `pandas` installed.
+We don't install `pandas` by default as part of the requirements because not every user of the library
+would want to query or create dataframes (many users just use the `send` API or the reporter functionality)
