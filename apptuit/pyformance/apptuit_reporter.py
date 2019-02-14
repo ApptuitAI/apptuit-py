@@ -11,6 +11,7 @@ NUMBER_OF_TOTAL_POINTS = "apptuit.reporter.send.total"
 NUMBER_OF_SUCCESSFUL_POINTS = "apptuit.reporter.send.successful"
 NUMBER_OF_FAILED_POINTS = "apptuit.reporter.send.failed"
 API_CALL_TIMER = "apptuit.reporter.send.time"
+BATCH_SIZE = 50000
 
 def default_error_handler(status_code, successful, failed, errors):
     """
@@ -88,16 +89,27 @@ class ApptuitReporter(Reporter):
         dps = self._collect_data_points(registry or self.registry, timestamp)
         self._update_counter(NUMBER_OF_TOTAL_POINTS, len(dps))
         meta_dps = self._collect_data_points(self._meta_metrics_registry)
-        if dps:
+        if not dps:
+            return
+        dps_len = len(dps)
+        success_count = 0
+        failed_count = 0
+        errors = []
+        for i in range(0, dps_len, BATCH_SIZE):
             try:
                 with self._meta_metrics_registry.timer(API_CALL_TIMER).time():
-                    self.client.send(dps + meta_dps)
-                    self._update_counter(NUMBER_OF_SUCCESSFUL_POINTS, len(dps))
+                    end_index = min(dps_len, i + BATCH_SIZE)
+                    self.client.send(dps[i: end_index])
+                    points_sent_count = end_index - i
+                    self._update_counter(NUMBER_OF_SUCCESSFUL_POINTS, points_sent_count)
                     self._update_counter(NUMBER_OF_FAILED_POINTS, 0)
+                    success_count += points_sent_count
             except ApptuitSendException as exception:
-                exception.success -= len(meta_dps)
                 self._update_counter(NUMBER_OF_SUCCESSFUL_POINTS, exception.success)
                 self._update_counter(NUMBER_OF_FAILED_POINTS, exception.failed)
+                success_count += exception.success
+                failed_count += exception.failed
+                errors += exception.errors
                 if self.error_handler:
                     self.error_handler(
                         exception.status_code,
@@ -105,7 +117,12 @@ class ApptuitReporter(Reporter):
                         exception.failed,
                         exception.errors
                     )
-                raise exception
+        self.client.send(meta_dps)
+        if failed_count != 0:
+            raise ApptuitSendException("Failed to send %d out of %d points" %
+                                       (failed_count, dps_len), success=success_count,
+                                       failed=failed_count, errors=errors)
+
 
     def _get_tags(self, key):
         """

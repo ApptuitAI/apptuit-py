@@ -10,7 +10,6 @@ except ImportError:
 from nose.tools import assert_raises, ok_, assert_is_not_none, assert_equals, assert_true
 from apptuit import Apptuit, DataPoint, TimeSeries, ApptuitException, APPTUIT_PY_TOKEN, \
                     APPTUIT_PY_TAGS, ApptuitSendException, apptuit_client
-from apptuit.apptuit_client import BATCH_SIZE
 
 def __get_apptuit_client():
     token = "asdashdsauh_8aeraerf"
@@ -229,11 +228,7 @@ def test_apptuit_send_exception():
     err = str(ApptuitSendException(
         "test", 400, 1, 1, [{"datapoint": "test", "error": "test_error"}]
     ))
-    assert_equals(err, "1 errors occurred\nIn the datapoint test Error Occurred: test_error\n")
-    err = str(ApptuitSendException(
-        "test", 401, 0, 1, "test error"
-    ))
-    assert_equals(err, "Status Code: 401; Failed to send 1 datapoints; Error Occured: test error\n")
+    assert_equals(err, "1 points failed with status: 400\ntest_error error occurred in the datapoint test\n")
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_apptuit_send_exception_400(mock_post):

@@ -20,7 +20,6 @@ except ImportError:
 
 MAX_TAGS_LIMIT = 25
 MAX_PAYLOAD_SIZE_MB = 5
-BATCH_SIZE = 50000
 
 def _get_user_agent():
     py_version = sys.version.split()[0]
@@ -200,39 +199,37 @@ class Apptuit(object):
         return sys.getsizeof(buf) * 1.0 / (1024 ** 2)
 
     def __send(self, payload, points_count, timeout):
-        for i in range(0, points_count, BATCH_SIZE):
-            _payload = payload[i: i + BATCH_SIZE]
-            body = json.dumps(_payload)
-            body = zlib.compress(body.encode("utf-8"))
-            headers = {}
-            headers["Authorization"] = "Bearer " + self.token
-            headers["Content-Type"] = "application/json"
-            headers["Content-Encoding"] = "deflate"
-            headers["User-Agent"] = _get_user_agent()
-            response = requests.post(self.put_apiurl, data=body, headers=headers, timeout=timeout)
-            if response.status_code != 200 and response.status_code != 204:
-                status_code = response.status_code
-                if status_code == 400:
-                    resp_json = response.json()
-                    raise ApptuitSendException(
-                        "Apptuit.send() failed, Due to %d error" % (status_code),
-                        status_code, resp_json["success"],
-                        resp_json["failed"], resp_json["errors"]
-                    )
-                if status_code == 413:
-                    raise ApptuitSendException("Too big payload for Apptuit.send(). Trying to send"
-                                               " %f mb of data with %d points, maximum allowed "
-                                               "payload size is %d mb" %
-                                               (self.__get_size_in_mb(body),
-                                               points_count, MAX_PAYLOAD_SIZE_MB), status_code, 0,
-                                               points_count,
-                                               "Payload size too big for Apptuit.send()")
-                if status_code == 401:
-                    error = "Apptuit API token is invalid"
-                else:
-                    error = "Server Error"
-                raise ApptuitSendException("Apptuit.send() failed, Due to %d error" % (status_code),
-                                        status_code, 0, points_count, error)
+        body = json.dumps(payload)
+        body = zlib.compress(body.encode("utf-8"))
+        headers = {}
+        headers["Authorization"] = "Bearer " + self.token
+        headers["Content-Type"] = "application/json"
+        headers["Content-Encoding"] = "deflate"
+        headers["User-Agent"] = _get_user_agent()
+        response = requests.post(self.put_apiurl, data=body, headers=headers, timeout=timeout)
+        if response.status_code != 200 and response.status_code != 204:
+            status_code = response.status_code
+            if status_code == 400:
+                resp_json = response.json()
+                raise ApptuitSendException(
+                    "Apptuit.send() failed, Due to %d error" % (status_code),
+                    status_code, resp_json["success"],
+                    resp_json["failed"], resp_json["errors"]
+                )
+            if status_code == 413:
+                raise ApptuitSendException("Too big payload for Apptuit.send(). Trying to send"
+                                            " %f mb of data with %d points, maximum allowed "
+                                            "payload size is %d mb" %
+                                            (self.__get_size_in_mb(body),
+                                            points_count, MAX_PAYLOAD_SIZE_MB), status_code, 0,
+                                            points_count,
+                                            "Payload size too big for Apptuit.send()")
+            if status_code == 401:
+                error = "Apptuit API token is invalid"
+            else:
+                error = "Server Error"
+            raise ApptuitSendException("Apptuit.send() failed, Due to %d error" % (status_code),
+                                    status_code, 0, points_count, error)
 
     def query(self, query_str, start, end=None, retry_count=0, timeout=180):
         """
@@ -537,7 +534,7 @@ class ApptuitSendException(ApptuitException):
     """
         An exception raised by Apptuit.send()
     """
-    def __init__(self, msg, status_code, success=None, failed=None, errors=None):
+    def __init__(self, msg, status_code=None, success=None, failed=None, errors=None):
         super(ApptuitSendException, self).__init__(msg)
         self.msg = msg
         self.status_code = status_code
@@ -549,14 +546,13 @@ class ApptuitSendException(ApptuitException):
         return self.__str__()
 
     def __str__(self):
-        if self.status_code == 400:
-            msg = str(self.failed) + " errors occurred\n"
-            for error in self.errors:
-                dp = error["datapoint"]
-                error_msg = error["error"]
-                msg += "In the datapoint " + str(dp) + " Error Occurred: " + str(error_msg) + '\n'
-            return msg
-        msg = "Status Code: " + str(self.status_code) + \
-              "; Failed to send " + str(self.failed) + \
-              " datapoints; Error Occured: " + self.errors + "\n"
+        msg = str(self.failed) + " points failed"
+        if self.status_code:
+            msg += " with status: %d\n" % (self.status_code)
+        else:
+            msg += "\n"
+        for error in self.errors:
+            dp = error["datapoint"]
+            error_msg = error["error"]
+            msg += "%s error occurred in the datapoint %s\n" % (str(error_msg), str(dp))
         return msg

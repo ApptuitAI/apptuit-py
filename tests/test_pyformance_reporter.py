@@ -7,13 +7,38 @@ import time
 from nose.tools import assert_raises, assert_equals, assert_greater_equal, assert_true
 from requests.exceptions import HTTPError
 from apptuit import ApptuitSendException, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
-from apptuit.pyformance.apptuit_reporter import ApptuitReporter
+from apptuit.pyformance.apptuit_reporter import ApptuitReporter, BATCH_SIZE, NUMBER_OF_TOTAL_POINTS
 from pyformance import MetricsRegistry
 
 try:
     from unittest.mock import Mock, patch
 except ImportError:
     from mock import Mock, patch
+
+@patch('apptuit.apptuit_client.requests.post')
+def test_send_batch_send(mock_post):
+    """
+        Test that when we create more than BATCH_SIZE number of points
+        we are able to send all of them
+    """
+    mock_post.return_value.status_code = 204
+    token = "asdashdsauh_8aeraerf"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
+                               reporting_interval=1,
+                               token=token,
+                               prefix="apr.",
+                               tags=tags)
+    points_to_be_created = BATCH_SIZE * 2 + 10
+    counters = [registry.counter("counter%d" % i) for i in range(points_to_be_created)]
+    for i in range(points_to_be_created):
+        counters[i].inc()
+    reporter.report_now()
+    total_points_sent = reporter._meta_metrics_registry.counter(NUMBER_OF_TOTAL_POINTS).get_count()
+    assert_equals(total_points_sent, points_to_be_created)
+
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_send_negative(mock_post):
