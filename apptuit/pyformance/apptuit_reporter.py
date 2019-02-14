@@ -87,7 +87,6 @@ class ApptuitReporter(Reporter):
             timestamp: timestamp of the data point
         """
         dps = self._collect_data_points(registry or self.registry, timestamp)
-        self._update_counter(NUMBER_OF_TOTAL_POINTS, len(dps))
         meta_dps = self._collect_data_points(self._meta_metrics_registry)
         if not dps:
             return
@@ -101,6 +100,7 @@ class ApptuitReporter(Reporter):
                     end_index = min(dps_len, i + BATCH_SIZE)
                     self.client.send(dps[i: end_index])
                     points_sent_count = end_index - i
+                    self._update_counter(NUMBER_OF_TOTAL_POINTS, points_sent_count)
                     self._update_counter(NUMBER_OF_SUCCESSFUL_POINTS, points_sent_count)
                     self._update_counter(NUMBER_OF_FAILED_POINTS, 0)
                     success_count += points_sent_count
