@@ -19,7 +19,6 @@ except ImportError:
     from urllib.parse import quote
 
 MAX_TAGS_LIMIT = 25
-MAX_PAYLOAD_SIZE_MB = 5
 
 def _get_user_agent():
     py_version = sys.version.split()[0]
@@ -218,12 +217,10 @@ class Apptuit(object):
                 )
             if status_code == 413:
                 raise ApptuitSendException("Too big payload for Apptuit.send(). Trying to send"
-                                            " %f mb of data with %d points, maximum allowed "
-                                            "payload size is %d mb" %
-                                            (self.__get_size_in_mb(body),
-                                            points_count, MAX_PAYLOAD_SIZE_MB), status_code, 0,
-                                            points_count,
-                                            "Payload size too big for Apptuit.send()")
+                                           " %f mb of data with %d points, please try sending "
+                                           "again with fewer points" %
+                                           (self.__get_size_in_mb(body), points_count),
+                                           status_code, 0, points_count)
             if status_code == 401:
                 error = "Apptuit API token is invalid"
             else:
@@ -538,7 +535,7 @@ class ApptuitSendException(ApptuitException):
         super(ApptuitSendException, self).__init__(msg)
         self.msg = msg
         self.status_code = status_code
-        self.errors = errors
+        self.errors = errors or {}
         self.success = success
         self.failed = failed
 
