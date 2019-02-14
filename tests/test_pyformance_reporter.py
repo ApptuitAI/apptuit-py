@@ -7,13 +7,70 @@ import time
 from nose.tools import assert_raises, assert_equals, assert_greater_equal, assert_true
 from requests.exceptions import HTTPError
 from apptuit import ApptuitSendException, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
-from apptuit.pyformance.apptuit_reporter import ApptuitReporter
+from apptuit.pyformance.apptuit_reporter import ApptuitReporter, BATCH_SIZE, \
+    NUMBER_OF_TOTAL_POINTS, NUMBER_OF_SUCCESSFUL_POINTS, NUMBER_OF_FAILED_POINTS
 from pyformance import MetricsRegistry
 
 try:
     from unittest.mock import Mock, patch
 except ImportError:
     from mock import Mock, patch
+
+@patch('apptuit.apptuit_client.requests.post')
+def test_batch_send(mock_post):
+    """
+        Test that when we create more than BATCH_SIZE number of points
+        we are able to send all of them
+    """
+    mock_post.return_value.status_code = 204
+    token = "asdashdsauh_8aeraerf"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
+                               reporting_interval=1,
+                               token=token,
+                               prefix="apr.",
+                               tags=tags)
+    points_to_be_created = BATCH_SIZE * 2 + 10
+    counters = [registry.counter("counter%d" % i) for i in range(points_to_be_created)]
+    for i in range(points_to_be_created):
+        counters[i].inc()
+    reporter.report_now()
+    total_points_sent = reporter._meta_metrics_registry.counter(NUMBER_OF_TOTAL_POINTS).get_count()
+    assert_equals(total_points_sent, points_to_be_created)
+
+
+@patch('apptuit.apptuit_client.requests.post')
+def test_partially_successful_send(mock_post):
+    """
+        Test that we handle partially successful sends
+    """
+    mock_post.return_value.status_code = 400
+    mock_post.side_effect = ApptuitSendException("failed to send some points", 400,
+                                                 success=98, failed=2, errors=[])
+    token = "asdashdsauh_8aeraerf"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
+                               reporting_interval=1,
+                               token=token,
+                               prefix="apr.",
+                               tags=tags)
+    points_to_be_created = 100
+    counters = [registry.counter("counter%d" % i) for i in range(points_to_be_created)]
+    for i in range(points_to_be_created):
+        counters[i].inc()
+    with assert_raises(ApptuitSendException):
+        reporter.report_now()
+    successful_points_sent = reporter._meta_metrics_registry.\
+                             counter(NUMBER_OF_SUCCESSFUL_POINTS).get_count()
+    failed_points_count = reporter._meta_metrics_registry.\
+                             counter(NUMBER_OF_FAILED_POINTS).get_count()
+    assert_equals(successful_points_sent, 98)
+    assert_equals(failed_points_count, 2)
+
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_send_negative(mock_post):
@@ -25,6 +82,7 @@ def test_send_negative(mock_post):
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -50,6 +108,7 @@ def test_reporter_thread_active(mock_post):
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -68,6 +127,7 @@ def test_invalid_metric_name():
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr\\",
@@ -87,6 +147,7 @@ def test_invalid_tag():
     tags = {"h\\ost": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -106,6 +167,7 @@ def test_invalid_registry():
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = None
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -123,6 +185,7 @@ def test_tags_with_key(mock_post):
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -142,6 +205,7 @@ def test_tags_with_key_invalid(mock_post):
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -160,6 +224,7 @@ def test_calling_report_now():
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -178,6 +243,7 @@ def test_zero_tags():
     token = "asdashdsauh_8aeraerf"
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.")
@@ -220,6 +286,7 @@ def test_collect_data_points():
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                prefix="apr.",
@@ -243,6 +310,7 @@ def test_globaltags_override():
     tags = {"region": "us-east-1"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                tags=tags)
@@ -267,6 +335,7 @@ def test_globaltags_none():
     tags = {"region": "us-east-1"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                tags=None)
@@ -289,6 +358,7 @@ def test_valid_prefix():
     tags = {"region": "us-east-1"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                prefix="pre-",
                                token=token,
@@ -306,6 +376,7 @@ def test_none_prefix():
     tags = {"region": "us-east-1"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                prefix=None,
                                token=token,
@@ -325,6 +396,7 @@ def test_meta_metrics_of_reporter(mock_post):
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
                                tags=tags)
