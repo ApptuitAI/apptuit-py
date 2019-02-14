@@ -221,14 +221,36 @@ def test_nonstring_invalid_datapoint_value():
     with assert_raises(ValueError):
         DataPoint(metric=metric_name, tags=tags, timestamp=ts, value=value)
 
-def test_apptuit_send_exception():
+def test_apptuit_send_exception_str():
     """
-    Test that ApptuitSendException str is valid
+    Test __star__ for ApptuitSendException
     """
     err = str(ApptuitSendException(
         "test", 400, 1, 1, [{"datapoint": "test", "error": "test_error"}]
     ))
-    assert_equals(err, "1 points failed with status: 400\ntest_error error occurred in the datapoint test\n")
+    assert_equals(err, "1 points failed with status: 400\ntest_error error occurred in the "
+                       "datapoint test\n")
+
+def test_apptuit_send_exception_repr():
+    """
+    Test __repr__ for ApptuitSendException
+    """
+    err = repr(ApptuitSendException(
+        "test", 400, 1, 1, [{"datapoint": "test", "error": "test_error"}]
+    ))
+    assert_equals(err, "1 points failed with status: 400\ntest_error error occurred in the "
+                       "datapoint test\n")
+
+def test_apptuit_send_exception_without_status():
+    """
+    Test __str__ for ApptuitSendException without status_code parameter
+    """
+    err = str(ApptuitSendException(
+        "test", success=1, failed=1, errors=[{"datapoint": "test", "error": "test_error"}]
+    ))
+    assert_equals(err, "1 points failed\ntest_error error occurred in the "
+                       "datapoint test\n")
+
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_apptuit_send_exception_400(mock_post):

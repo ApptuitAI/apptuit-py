@@ -7,7 +7,8 @@ import time
 from nose.tools import assert_raises, assert_equals, assert_greater_equal, assert_true
 from requests.exceptions import HTTPError
 from apptuit import ApptuitSendException, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
-from apptuit.pyformance.apptuit_reporter import ApptuitReporter, BATCH_SIZE, NUMBER_OF_TOTAL_POINTS
+from apptuit.pyformance.apptuit_reporter import ApptuitReporter, BATCH_SIZE, \
+    NUMBER_OF_TOTAL_POINTS, NUMBER_OF_SUCCESSFUL_POINTS, NUMBER_OF_FAILED_POINTS
 from pyformance import MetricsRegistry
 
 try:
@@ -16,7 +17,7 @@ except ImportError:
     from mock import Mock, patch
 
 @patch('apptuit.apptuit_client.requests.post')
-def test_send_batch_send(mock_post):
+def test_batch_send(mock_post):
     """
         Test that when we create more than BATCH_SIZE number of points
         we are able to send all of them
@@ -38,6 +39,37 @@ def test_send_batch_send(mock_post):
     reporter.report_now()
     total_points_sent = reporter._meta_metrics_registry.counter(NUMBER_OF_TOTAL_POINTS).get_count()
     assert_equals(total_points_sent, points_to_be_created)
+
+
+@patch('apptuit.apptuit_client.requests.post')
+def test_partially_successful_send(mock_post):
+    """
+        Test that we handle partially successful sends
+    """
+    mock_post.return_value.status_code = 400
+    mock_post.side_effect = ApptuitSendException("failed to send some points", 400,
+                                                 success=98, failed=2, errors=[])
+    token = "asdashdsauh_8aeraerf"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    registry = MetricsRegistry()
+    reporter = ApptuitReporter(registry=registry,
+                               api_endpoint="http://localhost",
+                               reporting_interval=1,
+                               token=token,
+                               prefix="apr.",
+                               tags=tags)
+    points_to_be_created = 100
+    counters = [registry.counter("counter%d" % i) for i in range(points_to_be_created)]
+    for i in range(points_to_be_created):
+        counters[i].inc()
+    with assert_raises(ApptuitSendException):
+        reporter.report_now()
+    successful_points_sent = reporter._meta_metrics_registry.\
+                             counter(NUMBER_OF_SUCCESSFUL_POINTS).get_count()
+    failed_points_count = reporter._meta_metrics_registry.\
+                             counter(NUMBER_OF_FAILED_POINTS).get_count()
+    assert_equals(successful_points_sent, 98)
+    assert_equals(failed_points_count, 2)
 
 
 @patch('apptuit.apptuit_client.requests.post')
