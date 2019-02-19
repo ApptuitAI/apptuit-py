@@ -101,6 +101,7 @@ class Apptuit(object):
         self._global_tags = global_tags
         if not self._global_tags and not ignore_environ_tags:
             self._global_tags = _get_tags_from_environment()
+        self.session = requests.Session()
 
     @property
     def put_apiurl(self):
@@ -205,7 +206,7 @@ class Apptuit(object):
         headers["Content-Type"] = "application/json"
         headers["Content-Encoding"] = "deflate"
         headers["User-Agent"] = _get_user_agent()
-        response = requests.post(self.put_apiurl, data=body, headers=headers, timeout=timeout)
+        response = self.session.post(self.put_apiurl, data=body, headers=headers, timeout=timeout)
         if response.status_code != 200 and response.status_code != 204:
             status_code = response.status_code
             if status_code == 400:
@@ -269,7 +270,7 @@ class Apptuit(object):
         headers["User-Agent"] = _get_user_agent()
         if self.token:
             headers["Authorization"] = "Bearer " + self.token
-        hresp = requests.get(query_string, headers=headers, timeout=timeout)
+        hresp = self.session.get(query_string, headers=headers, timeout=timeout)
         body = hresp.content
         return _parse_response(body, start, end)
 

@@ -41,7 +41,7 @@ def test_client_global_tags():
     mock_environ.stop()
 
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_send_positive(mock_post):
     """
     Test that send API is working as expected
@@ -65,7 +65,7 @@ def test_send_positive(mock_post):
     if dps:
         client.send(dps)
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_send_server_error(mock_post):
     """
     Test for the case when there is an error from the backend for send
@@ -88,7 +88,7 @@ def test_send_server_error(mock_post):
         if points_sent > 500:
             break
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_send_413_error(mock_post):
     """
     Test for the case when we get 413 from the PUT API
@@ -252,7 +252,7 @@ def test_apptuit_send_exception_without_status():
                        "datapoint test\n")
 
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_apptuit_send_exception_400(mock_post):
     """
     Test for the case when there is an error from the backend for send
@@ -266,7 +266,7 @@ def test_apptuit_send_exception_400(mock_post):
     with assert_raises(ApptuitSendException):
         client.send(dps)
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_apptuit_send_exception_401(mock_post):
     """
     Test for the case when there is an error from the backend for send
@@ -388,7 +388,7 @@ def test_timeseries_payload_with_envtags():
     assert_equals(expected_payload, payload)
 
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_send_timeseries(mock_post):
     """
     Test the send_timeseries API
@@ -412,7 +412,7 @@ def test_send_timeseries(mock_post):
     series_list.append(series2)
     client.send_timeseries(series_list)
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_send_timeseries_empty(mock_post):
     """
     Test the send_timeseries API with an empty series list
@@ -443,7 +443,7 @@ def test_datapoint_repr():
     assert_equals(repr(point), expected_repr)
     assert_equals(str(point), expected_repr)
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_tags_limit_direct(mock_post):
     """
     Test for failure when too many tags are used for datapoints/series
@@ -462,7 +462,7 @@ def test_tags_limit_direct(mock_post):
     with assert_raises(ValueError):
         client.send_timeseries([series1, series2])
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_tags_limit_indirect(mock_post):
     """
     Test for failure when too many tags are used indirectly (when combined with global tags)

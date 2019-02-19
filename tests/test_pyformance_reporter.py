@@ -16,7 +16,7 @@ try:
 except ImportError:
     from mock import Mock, patch
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_batch_send(mock_post):
     """
         Test that when we create more than BATCH_SIZE number of points
@@ -41,7 +41,7 @@ def test_batch_send(mock_post):
     assert_equals(total_points_sent, points_to_be_created)
 
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_partially_successful_send(mock_post):
     """
         Test that we handle partially successful sends
@@ -72,7 +72,7 @@ def test_partially_successful_send(mock_post):
     assert_equals(failed_points_count, 2)
 
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_send_negative(mock_post):
     """
         Test negative responce from Apptuit backend
@@ -97,7 +97,7 @@ def test_send_negative(mock_post):
     with assert_raises(ApptuitSendException):
         reporter.report_now()
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_reporter_thread_active(mock_post):
     """
         Test that reporter thread is active even if we are not able to send data
@@ -175,7 +175,7 @@ def test_invalid_registry():
     with assert_raises(AttributeError) as ex:
         reporter._collect_data_points(None, None)
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_tags_with_key(mock_post):
     """
         Test that additions tags work
@@ -195,7 +195,7 @@ def test_tags_with_key(mock_post):
         cpu.add(random.randint(i, 100))
     reporter.report_now()
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_tags_with_key_invalid(mock_post):
     """
             Test that invalid tags raise error
@@ -231,7 +231,7 @@ def test_calling_report_now():
                                tags=tags)
     counter_test = registry.counter("counter")
     counter_test.inc(2)
-    with patch('apptuit.apptuit_client.requests.post') as mock_method:
+    with patch('apptuit.apptuit_client.requests.Session.post') as mock_method:
         mock_method.return_value.status_code = 200
         reporter.report_now()
         assert_equals(mock_method.called, True)
@@ -386,7 +386,7 @@ def test_none_prefix():
     dps = reporter._collect_data_points(reporter.registry)
     assert_equals(dps[0].metric, "counter1.count")
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_meta_metrics_of_reporter(mock_post):
     """
     Test that meta metrics of reporter work

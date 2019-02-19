@@ -10,11 +10,11 @@ from apptuit import APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TAGS
 VALID_CHARSET = set(ascii_letters + digits + "-_./")
 INVALID_CHARSET = frozenset(map(chr, range(128))) - VALID_CHARSET
 
-def _contains_valid_chars(string):
-    return INVALID_CHARSET.isdisjoint(string)
+def _contains_valid_chars(val):
+    return INVALID_CHARSET.isdisjoint(val)
 
 def _validate_tags(tags):
-    for tagk, tagv in tags.items():
+    for tagk in tags.keys():
         if not tagk or not _contains_valid_chars(tagk):
             raise ValueError("Tag key %s contains an invalid character, "
                              "allowed characters are a-z, A-Z, 0-9, -, _, ., and /" % tagk)

@@ -43,7 +43,7 @@ def do_query(mock_get):
     end = 1407609000
     return client.query(query, start, end)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_query(mock_get):
     """
     Test a valid query and make sure results are returned
@@ -51,7 +51,7 @@ def test_query(mock_get):
     resp = do_query(mock_get)
     assert_is_not_none(resp[0])
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_query_result_number_index(mock_get):
     """
     Test that we can access the output by number based indexing from
@@ -61,7 +61,7 @@ def test_query_result_number_index(mock_get):
     df = resp[0].to_df()
     assert_is_not_none(df)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_query_result_string_index(mock_get):
     """
     Test that we can access the output by the name of the metric from the
@@ -71,7 +71,7 @@ def test_query_result_string_index(mock_get):
     df = resp["nyc.taxi.rides"].to_df()
     assert_is_not_none(df)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_df_shape(mock_get):
     """
     Verify the dataframe shape
@@ -80,7 +80,7 @@ def test_df_shape(mock_get):
     df = resp[0].to_df()
     assert_equals(df.shape, (432, 1))
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_number_of_series(mock_get):
     """
     Verify the number of time series in the query result
@@ -88,7 +88,7 @@ def test_number_of_series(mock_get):
     resp = do_query(mock_get)
     assert_equals(len(resp[0].series), 1)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_data(mock_get):
     """
     Verify the data returned from the query
@@ -98,7 +98,7 @@ def test_data(mock_get):
     df = resp[0].to_df()
     assert_true(df.equals(expected_df))
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_metadata(mock_get):
     """
     Test that the metadata of the query results are as expected
@@ -110,7 +110,7 @@ def test_metadata(mock_get):
     assert_equals(series.name.metric, expected_series_name)
     assert_equals(series.name.tags, expected_tags)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_multiple_retries(mock_get):
     """
     Test that the query API attempts retries when an error is returned from
@@ -128,7 +128,7 @@ def test_multiple_retries(mock_get):
     with assert_raises(ApptuitException):
         client.query(query, start, end, retry_count=3)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_get_error(mock_get):
     """
     Test that when the retry_count is 0 for the query API we get an exception
@@ -144,7 +144,7 @@ def test_get_error(mock_get):
     with assert_raises(ApptuitException):
         client.query(query, start, end, retry_count=0)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_invalid_metric_name(mock_get):
     """
     Test that we get an exception if the metric name contains invalid characters
@@ -199,7 +199,7 @@ def test_invalid_metric_name(mock_get):
     with assert_raises(ValueError):
         client.query(query, start, end)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_empty_dps(mock_get):
     """
     Test that we get an exception if the dps array is empty in the JSON response
@@ -253,7 +253,7 @@ def test_empty_dps(mock_get):
     client.query(query, start, end)
 
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_empty_output(mock_get):
     """
     Test the case when the outputs array is empty in the response
@@ -306,7 +306,7 @@ def test_empty_output(mock_get):
     resp = client.query(query, start, end)
     assert_is_none(resp)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_empty_results(mock_get):
     """
     Test that when results array is empty in the response and we try to access the
@@ -368,7 +368,7 @@ def test_empty_results(mock_get):
     with assert_raises(KeyError):
         _ = resp[0]
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_tags_dict_type(mock_get):
     """
     Test that an exception is raised if the tags returned in the response
@@ -429,7 +429,7 @@ def test_tags_dict_type(mock_get):
     with assert_raises(ValueError):
         client.query(query, start, end)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_invalid_char_in_tag_key(mock_get):
     """
     Test for invalid character in one of the tag keys in the response
@@ -491,7 +491,7 @@ def test_invalid_char_in_tag_key(mock_get):
     with assert_raises(ValueError):
         client.query(query, start, end)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_invalid_char_in_tag_value(mock_get):
     """
     Test for invalid character in tag value in the response
@@ -570,7 +570,7 @@ def test_timeseries_obj_creation():
     with assert_raises(ValueError):
         apptuit_client.TimeSeries(metric=None, tags=None)
 
-@patch('apptuit.apptuit_client.requests.get')
+@patch('apptuit.apptuit_client.requests.Session.get')
 def test_missing_pandas(mock_get):
     orig_modules = sys.modules.copy()
     orig_pandas = orig_modules['pandas']
