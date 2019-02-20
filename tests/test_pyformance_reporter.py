@@ -3,12 +3,13 @@
 """
 import os
 import random
+import socket
 import time
 from nose.tools import assert_raises, assert_equals, assert_greater_equal, assert_true
 from requests.exceptions import HTTPError
 from apptuit import ApptuitSendException, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
 from apptuit.pyformance.apptuit_reporter import ApptuitReporter, BATCH_SIZE, \
-    NUMBER_OF_TOTAL_POINTS, NUMBER_OF_SUCCESSFUL_POINTS, NUMBER_OF_FAILED_POINTS
+    NUMBER_OF_TOTAL_POINTS, NUMBER_OF_SUCCESSFUL_POINTS, NUMBER_OF_FAILED_POINTS, DISABLE_HOST_TAG
 from pyformance import MetricsRegistry
 
 try:
@@ -236,10 +237,13 @@ def test_calling_report_now():
         reporter.report_now()
         assert_equals(mock_method.called, True)
 
-def test_zero_tags():
+@patch('apptuit.apptuit_client.requests.post')
+def test_zero_tags(mock_post):
     """
-        Test that using reporter without tags raises error
+        Test that using reporter without tags does not raise error
+        (we add host tag)
     """
+    mock_post.return_value.status_code = 204
     token = "asdashdsauh_8aeraerf"
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
@@ -249,8 +253,26 @@ def test_zero_tags():
                                prefix="apr.")
     counter_test = registry.counter('counter')
     counter_test.inc(2)
-    with assert_raises(ValueError):
-        reporter.report_now()
+    reporter.report_now()
+
+@patch('apptuit.apptuit_client.requests.post')
+def test_zero_tags_with_host_disabled(mock_post):
+    """
+        Test that using reporter without tags raises error
+    """
+    mock_post.return_value.status_code = 204
+    token = "asdashdsauh_8aeraerf"
+    registry = MetricsRegistry()
+    with patch.dict(os.environ, {DISABLE_HOST_TAG: "True"}):
+        reporter = ApptuitReporter(registry=registry,
+                                   api_endpoint="http://localhost",
+                                   reporting_interval=1,
+                                   token=token,
+                                   prefix="apr.")
+        counter_test = registry.counter('counter')
+        counter_test.inc(2)
+        with assert_raises(ValueError):
+            reporter.report_now()
 
 
 def test_no_token():
@@ -306,6 +328,7 @@ def test_globaltags_override():
         Test that if the global tags and metric tags contain same tag key,
         the metric tags override global tags
     """
+    host = socket.gethostname()
     token = "asdashdsauh_8aeraerf"
     tags = {"region": "us-east-1"}
     registry = MetricsRegistry()
@@ -322,15 +345,16 @@ def test_globaltags_override():
     counter3.inc()
     dps = reporter._collect_data_points(reporter.registry)
     dps = sorted(dps, key=lambda x: x.metric)
-    assert_equals(dps[0].tags, {"region": "us-west-2", "id": 1})
-    assert_equals(dps[1].tags, {"region": "us-west-3", "id": 2, "new_tag": "foo"})
-    assert_equals(dps[2].tags, {"region": "us-east-1"})
-    assert_equals(reporter.tags, {"region": "us-east-1"})
+    assert_equals(dps[0].tags, {"region": "us-west-2", "id": 1, "host": host})
+    assert_equals(dps[1].tags, {"region": "us-west-3", "id": 2, "new_tag": "foo", "host": host})
+    assert_equals(dps[2].tags, {"region": "us-east-1", "host": host})
+    assert_equals(reporter.tags, {"region": "us-east-1", "host": host})
 
 def test_globaltags_none():
     """
         Test that metric tags work when global tags are not present
     """
+    host = socket.gethostname()
     token = "asdashdsauh_8aeraerf"
     tags = {"region": "us-east-1"}
     registry = MetricsRegistry()
@@ -346,9 +370,9 @@ def test_globaltags_none():
     dps = reporter._collect_data_points(reporter.registry)
     dps = sorted(dps, key=lambda x: x.metric)
     assert_equals(len(dps),2)
-    assert_equals(dps[0].tags, {"region": "us-west-2", "id": 1})
-    assert_equals(dps[1].tags, {"region": "us-west-3", "id": 2, "new_tag": "foo"})
-    assert_true(reporter.tags is None)
+    assert_equals(dps[0].tags, {"region": "us-west-2", "id": 1, "host": host})
+    assert_equals(dps[1].tags, {"region": "us-west-3", "id": 2, "new_tag": "foo", "host": host})
+    assert_equals(reporter.tags, {"host": host})
 
 def test_valid_prefix():
     """
@@ -393,13 +417,12 @@ def test_meta_metrics_of_reporter(mock_post):
     """
     mock_post.return_value.status_code = 200
     token = "asdashdsauh_8aeraerf"
-    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(registry=registry,
                                api_endpoint="http://localhost",
                                reporting_interval=1,
                                token=token,
-                               tags=tags)
+                               tags=None)
     cput = registry.counter("aaaaa")
     cput.inc(1)
     dps = reporter._collect_data_points(reporter.registry)
@@ -416,4 +439,3 @@ def test_meta_metrics_of_reporter(mock_post):
     assert_equals(dps[1].metric, "apptuit.reporter.send.successful.count")
     assert_equals(dps[11].metric, "apptuit.reporter.send.time.count")
     assert_equals(dps[17].metric, "apptuit.reporter.send.total.count")
-    

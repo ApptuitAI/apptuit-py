@@ -5,6 +5,7 @@ Tests for token and global tags environment variables
 import math
 import time
 import os
+import socket
 import warnings
 from nose.tools import assert_equals, assert_raises
 from pyformance import MetricsRegistry
@@ -12,6 +13,7 @@ from pyformance import MetricsRegistry
 from apptuit import apptuit_client, Apptuit, DataPoint, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS, \
                     DEPRECATED_APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TOKEN
 from apptuit.pyformance import ApptuitReporter
+from apptuit.pyformance.apptuit_reporter import DISABLE_HOST_TAG
 
 try:
     from unittest.mock import Mock, patch
@@ -55,21 +57,60 @@ def test_tags_env_variable_parsing_negative():
 
 def test_tags_env_variable_parsing_positive():
     """
-        Test that wel are able to parse the global tags from environment variable
+        Test that we are able to parse the global tags from environment variable
     """
+    host = socket.gethostname()
+    token = "test_token"
     test_cases = [
-        (" ", {}),
-        ('tagk1: 22, tagk2: tagv2', {"tagk1": "22", "tagk2": "tagv2"}),
-        ('tagk1: 22, , tagk2: tagv2', {"tagk1": "22", "tagk2": "tagv2"}),
-        ('  tagk1 : 22,,tagk2  : tagv2  ', {"tagk1": "22", "tagk2": "tagv2"}),
-        (',tagk1: 22, tagk2: tagv2,', {"tagk1": "22", "tagk2": "tagv2"}),
-        (', , , , tagk1: 22, tagk2: tagv2, , ,  , ,', {"tagk1": "22", "tagk2": "tagv2"})
+        (" ", {"host": host}),
+        ("tagk1: 22, tagk2: tagv2", {"tagk1": "22", "tagk2": "tagv2", "host": host}),
+        ("tagk1: 22, , tagk2: tagv2", {"tagk1": "22", "tagk2": "tagv2", "host": host}),
+        ("  tagk1 : 22,,tagk2  : tagv2  ", {"tagk1": "22", "tagk2": "tagv2", "host": host}),
+        (",tagk1: 22, tagk2: tagv2,", {"tagk1": "22", "tagk2": "tagv2", "host": host}),
+        (", , , , tagk1: 22, tagk2: tagv2, , ,  , ,", {"tagk1": "22", "tagk2": "tagv2",
+                                                       "host": host}),
+        ("tagk1: tagv1, tagk2: tagv2, host: myhost", {"tagk1": "tagv1", "tagk2": "tagv2",
+                                                      "host": "myhost"})
     ]
     for env_tags_value, expected_global_tags in test_cases:
         mock_environ = patch.dict(os.environ, {APPTUIT_PY_TAGS: env_tags_value})
         mock_environ.start()
-        assert_equals(apptuit_client._get_tags_from_environment(), expected_global_tags)
+        reporter = ApptuitReporter(token=token)
+        assert_equals(reporter.tags, expected_global_tags)
         mock_environ.stop()
+
+def test_env_tags_with_host_tag_disabled():
+    token = "test_token"
+    disable_host_tag_true_values = ["True", "true"]
+    disable_host_tag_other_values = ["False", "false"]
+    test_cases = [
+        (" ", None),
+        ("tagk1: 22, tagk2: tagv2", {"tagk1": "22", "tagk2": "tagv2"}),
+        ("tagk1: 22, , tagk2: tagv2", {"tagk1": "22", "tagk2": "tagv2"}),
+        ("  tagk1 : 22,,tagk2  : tagv2  ", {"tagk1": "22", "tagk2": "tagv2"}),
+        (",tagk1: 22, tagk2: tagv2,", {"tagk1": "22", "tagk2": "tagv2"}),
+        (", , , , tagk1: 22, tagk2: tagv2, , ,  , ,", {"tagk1": "22", "tagk2": "tagv2"}),
+        ("tagk1: tagv1, tagk2: tagv2, host: myhost", {"tagk1": "tagv1", "tagk2": "tagv2",
+                                                      "host": "myhost"})
+    ]
+    for env_tags_value, expected_global_tags in test_cases:
+        for disable_value in disable_host_tag_true_values:
+            mock_environ = patch.dict(os.environ, {APPTUIT_PY_TAGS: env_tags_value,
+                                                   DISABLE_HOST_TAG: disable_value})
+            mock_environ.start()
+            reporter = ApptuitReporter(token=token)
+            assert_equals(reporter.tags, expected_global_tags)
+            mock_environ.stop()
+        for disable_value in disable_host_tag_other_values:
+            mock_environ = patch.dict(os.environ, {APPTUIT_PY_TAGS: env_tags_value,
+                                                   DISABLE_HOST_TAG: disable_value})
+            expected_global_tags = expected_global_tags.copy() if expected_global_tags else {}
+            if "host" not in expected_global_tags:
+                expected_global_tags["host"] = socket.gethostname()
+            mock_environ.start()
+            reporter = ApptuitReporter(token=token)
+            assert_equals(reporter.tags, expected_global_tags)
+            mock_environ.stop()
 
 def test_token_negative():
     """
@@ -87,7 +128,7 @@ def test_token_negative():
 
 def test_env_global_tags_positive():
     """
-        Test that apptuit works with global tags env variable and without them
+        Test that the client works with global tags env variable and without them
     """
     mock_environ = patch.dict(os.environ, {APPTUIT_PY_TOKEN: "environ_token",
                                            APPTUIT_PY_TAGS: 'tagk1: 22, tagk2: tagv2'})
@@ -147,6 +188,7 @@ def test_no_environ_tags():
     """
         Test tags work even if no global tags present as env variable
     """
+
     timestamp = int(time.time())
     test_val = math.pi
     mock_environ = patch.dict(os.environ, {APPTUIT_PY_TOKEN: "environ_token"})

@@ -1,16 +1,19 @@
 """
 Apptuit Pyformance Reporter
 """
+import os
+import socket
 import sys
 from pyformance import MetricsRegistry
 from pyformance.reporters.reporter import Reporter
-from apptuit import Apptuit, DataPoint, timeseries, ApptuitSendException
+from apptuit import Apptuit, DataPoint, TimeSeriesName, ApptuitSendException
 from apptuit.utils import _get_tags_from_environment
 
 NUMBER_OF_TOTAL_POINTS = "apptuit.reporter.send.total"
 NUMBER_OF_SUCCESSFUL_POINTS = "apptuit.reporter.send.successful"
 NUMBER_OF_FAILED_POINTS = "apptuit.reporter.send.failed"
 API_CALL_TIMER = "apptuit.reporter.send.time"
+DISABLE_HOST_TAG = "APPTUIT_DISABLE_HOST_TAG"
 BATCH_SIZE = 50000
 
 def default_error_handler(status_code, successful, failed, errors):
@@ -70,6 +73,18 @@ class ApptuitReporter(Reporter):
             if self.tags is not None:
                 environ_tags.update(self.tags)
             self.tags = environ_tags
+        disable_host_tags = os.environ.get(DISABLE_HOST_TAG, False)
+        if disable_host_tags:
+            if disable_host_tags.lower() == "false":
+                disable_host_tags = False
+            else:
+                disable_host_tags = True
+        if not disable_host_tags:
+            if self.tags:
+                if self.tags.get("host") is None:
+                    self.tags["host"] = socket.gethostname()
+            else:
+                self.tags = {"host": socket.gethostname()}
         self.prefix = prefix if prefix is not None else ""
         self.__decoded_metrics_cache = {}
         self.client = Apptuit(token, api_endpoint, ignore_environ_tags=True)
@@ -136,7 +151,7 @@ class ApptuitReporter(Reporter):
         if val:
             return val[0], val[1]
 
-        metric_name, metric_tags = timeseries.decode_metric(key)
+        metric_name, metric_tags = TimeSeriesName.decode_metric(key)
         self.__decoded_metrics_cache[key] = (metric_name, metric_tags)
         return metric_name, metric_tags
 
