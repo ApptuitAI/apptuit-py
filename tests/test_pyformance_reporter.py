@@ -120,7 +120,8 @@ def test_reporter_thread_active(mock_post):
     time.sleep(3)
     assert_greater_equal(mock_post.call_count, 2)
 
-def test_invalid_metric_name():
+@patch('apptuit.apptuit_client.requests.post')
+def test_invalid_metric_name(mock_post):
     """
         Test for invalid metric name when reporting data
     """
@@ -140,7 +141,8 @@ def test_invalid_metric_name():
     with assert_raises(ValueError) as ex:
         reporter._collect_data_points(reporter.registry, None)
 
-def test_invalid_tag():
+@patch('apptuit.apptuit_client.requests.post')
+def test_invalid_tag(mock_post):
     """
         Test for invalid tag key when reporting data
     """
@@ -369,7 +371,7 @@ def test_globaltags_none():
     counter2.inc()
     dps = reporter._collect_data_points(reporter.registry)
     dps = sorted(dps, key=lambda x: x.metric)
-    assert_equals(len(dps),2)
+    assert_equals(len(dps), 2)
     assert_equals(dps[0].tags, {"region": "us-west-2", "id": 1, "host": host})
     assert_equals(dps[1].tags, {"region": "us-west-3", "id": 2, "new_tag": "foo", "host": host})
     assert_equals(reporter.tags, {"host": host})

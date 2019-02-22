@@ -2,7 +2,6 @@
 utilises for apptuit
 """
 import os
-import string
 from string import ascii_letters, digits
 import warnings
 
@@ -55,10 +54,10 @@ def strtobool(val):
     are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
     'val' is anything else.
     """
-    val = string.lower(val)
+    val = val.lower()
     if val in ('y', 'yes', 't', 'true', 'on', '1'):
         return 1
     elif val in ('n', 'no', 'f', 'false', 'off', '0'):
         return 0
     else:
-        raise ValueError, "invalid truth value %r" % (val,)
+        raise ValueError("invalid truth value %r" % (val,))
