@@ -32,7 +32,7 @@ pip install apptuit --upgrade
    * [Sending data using Apptuit pyformance reporter](#sending-data-using-apptuit-pyformance-reporter)
      * [Error Handling in ApptuitReporter](#error-handling-in-apptuitreporter)
      * [Sending Tags/Metadata](#tagsmetadata)
-     * [About Host tag](#abouthosttag)
+     * [About Host tag](#about-host-tag)
      * [Restrictions on Tags](#restrictions-on-tags-and-metric-names)
      * [Meta Metrics](#meta-metrics)
  - [Sending Data using `send()` API](#sending-data-using-send-api)
@@ -456,8 +456,9 @@ This is helpful in order to group the metrics by host if the reporter is being r
 of the `host` tag key can be overridden by passing your own `host` tag in the tags parameter to the reporter or
 by setting a `host` tag in the global environment variable for tags
 
-If you don't wish for the `host` tag to be set by default you can set an environment variable
-`APPTUIT_DISABLE_HOST_TAG` to "true".
+If you don't wish for the `host` tag to be set by default you disable it by setting the
+`disable_host_tag` parameter of the reporter to `False`. Alternatively you can set the environment
+variable `APPTUIT_DISABLE_HOST_TAG` to "true" to disable it.
 
 #### Restrictions on Tags and Metric names
 - **Allowed characters in tag keys and metric names** - Tag keys and metric names can have any unicode letters (as defined by unicode specification) and the following special characters:  `.`, `-`, `_`, `/`. However, if you are looking to follow Prometheus compliant naming ([see specification])(https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels) you should restrict them to ASCII letters, digits and  underscores only and it must match the regex `[a-zA-Z_][a-zA-Z0-9_]*`. No such restriction is applicable on tag values.
