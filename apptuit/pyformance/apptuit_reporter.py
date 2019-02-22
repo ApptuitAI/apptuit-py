@@ -1,6 +1,7 @@
 """
 Apptuit Pyformance Reporter
 """
+from distutils.util import strtobool
 import os
 import socket
 import sys
@@ -77,16 +78,11 @@ class ApptuitReporter(Reporter):
             self.tags = environ_tags
 
         if disable_host_tag is None:
-            disable_host_tag_val = os.environ.get(DISABLE_HOST_TAG, False)
-            if disable_host_tag_val:
-                if disable_host_tag_val.lower() == "false":
-                    disable_host_tag_val = False
-                else:
-                    disable_host_tag_val = True
-        else:
-            disable_host_tag_val = disable_host_tag
+            disable_host_tag = os.environ.get(DISABLE_HOST_TAG, False)
+            if disable_host_tag:
+                disable_host_tag = strtobool(disable_host_tag)
 
-        if not disable_host_tag_val:
+        if not disable_host_tag:
             if self.tags:
                 if self.tags.get("host") is None:
                     self.tags["host"] = socket.gethostname()
