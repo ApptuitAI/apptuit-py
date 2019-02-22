@@ -79,7 +79,11 @@ def test_tags_env_variable_parsing_positive():
         assert_equals(reporter.tags, expected_global_tags)
         mock_environ.stop()
 
-def test_env_tags_with_host_tag_disabled():
+def test_env_tags_with_host_tag_disabled_env():
+    """
+    Test global tags from environment when host tag is disabled through
+    the APPTUIT_DISABLE_HOST_TAG variable
+    """
     token = "test_token"
     disable_host_tag_true_values = ["True", "true"]
     disable_host_tag_other_values = ["False", "false"]
@@ -111,6 +115,44 @@ def test_env_tags_with_host_tag_disabled():
             reporter = ApptuitReporter(token=token)
             assert_equals(reporter.tags, expected_global_tags)
             mock_environ.stop()
+
+def test_env_tags_with_host_tag_disabled_param():
+    """
+    Test global tags from environment when host tag is disabled through
+    the disable_host_tag parameter to the reporter
+    """
+    token = "test_token"
+    disable_host_tag_true_values = ["True", "true"]
+    disable_host_tag_other_values = ["False", "false"]
+    test_cases = [
+        (" ", None),
+        ("tagk1: 22, tagk2: tagv2", {"tagk1": "22", "tagk2": "tagv2"}),
+        ("tagk1: 22, , tagk2: tagv2", {"tagk1": "22", "tagk2": "tagv2"}),
+        ("  tagk1 : 22,,tagk2  : tagv2  ", {"tagk1": "22", "tagk2": "tagv2"}),
+        (",tagk1: 22, tagk2: tagv2,", {"tagk1": "22", "tagk2": "tagv2"}),
+        (", , , , tagk1: 22, tagk2: tagv2, , ,  , ,", {"tagk1": "22", "tagk2": "tagv2"}),
+        ("tagk1: tagv1, tagk2: tagv2, host: myhost", {"tagk1": "tagv1", "tagk2": "tagv2",
+                                                      "host": "myhost"})
+    ]
+    for env_tags_value, expected_global_tags in test_cases:
+        for disable_value in disable_host_tag_true_values:
+            mock_environ = patch.dict(os.environ, {APPTUIT_PY_TAGS: env_tags_value,
+                                                   DISABLE_HOST_TAG: disable_value})
+            mock_environ.start()
+            reporter = ApptuitReporter(token=token, disable_host_tag=True)
+            assert_equals(reporter.tags, expected_global_tags)
+            mock_environ.stop()
+        for disable_value in disable_host_tag_other_values:
+            mock_environ = patch.dict(os.environ, {APPTUIT_PY_TAGS: env_tags_value,
+                                                   DISABLE_HOST_TAG: disable_value})
+            expected_global_tags = expected_global_tags.copy() if expected_global_tags else {}
+            if "host" not in expected_global_tags:
+                expected_global_tags["host"] = socket.gethostname()
+            mock_environ.start()
+            reporter = ApptuitReporter(token=token)
+            assert_equals(reporter.tags, expected_global_tags)
+            mock_environ.stop()
+
 
 def test_token_negative():
     """
