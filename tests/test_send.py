@@ -71,7 +71,6 @@ def test_send_server_error(mock_post):
     Test for the case when there is an error from the backend for send
     """
     mock_post.return_value.status_code = 500
-    token = "asdashdsauh_8aeraerf"
     client = __get_apptuit_client()
     metric_name = "node.load_avg.1m"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
@@ -258,8 +257,8 @@ def test_apptuit_send_exception_400(mock_post):
     Test for the case when there is an error from the backend for send
     """
     mock_post.return_value.status_code = 400
-    mock_post.return_value.content = '{"success": 0, "failed": 1, "errors": [{"datapoint": "", "error": "test_error"}] }'
-    token = "asdashdsauh_8aeraerf"
+    mock_post.return_value.content = '{"success": 0, "failed": 1, ' + \
+                                     '"errors": [{"datapoint": "", "error": "test_error"}] }'
     client = __get_apptuit_client()
     dp = DataPoint(metric="test", tags={"tk": "tv"}, timestamp=123, value=123)
     dps = [dp]
