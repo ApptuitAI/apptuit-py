@@ -453,12 +453,12 @@ It also ensures that we will report separate time-series for order-counts of dif
 #### About Host Tag
 The reporter will add a `host` tag key with host name as its value (obtained by calling `socket.gethostname()`).
 This is helpful in order to group the metrics by host if the reporter is being run on multiple servers. The value
-of the `host` tag key can be overridden by passing your own `host` tag in the tags parameter to the reporter or
+of the `host` tag key can be overridden by passing your own `host` tag in the `tags` parameter to the reporter or
 by setting a `host` tag in the global environment variable for tags
 
-If you don't wish for the `host` tag to be set by default you disable it by setting the
-`disable_host_tag` parameter of the reporter to `False`. Alternatively you can set the environment
-variable `APPTUIT_DISABLE_HOST_TAG` to "true" to disable it.
+If you don't wish for the `host` tag to be set by default you can disable it by setting the
+`disable_host_tag` parameter of the reporter to `True`. Alternatively you can set the environment
+variable `APPTUIT_DISABLE_HOST_TAG` to `True` to disable it.
 
 #### Restrictions on Tags and Metric names
 - **Allowed characters in tag keys and metric names** - Tag keys and metric names can have any unicode letters (as defined by unicode specification) and the following special characters:  `.`, `-`, `_`, `/`. However, if you are looking to follow Prometheus compliant naming ([see specification])(https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels) you should restrict them to ASCII letters, digits and  underscores only and it must match the regex `[a-zA-Z_][a-zA-Z0-9_]*`. No such restriction is applicable on tag values.
