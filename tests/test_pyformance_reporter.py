@@ -120,7 +120,7 @@ def test_reporter_thread_active(mock_post):
     time.sleep(3)
     assert_greater_equal(mock_post.call_count, 2)
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_invalid_metric_name(mock_post):
     """
         Test for invalid metric name when reporting data
@@ -141,7 +141,7 @@ def test_invalid_metric_name(mock_post):
     with assert_raises(ValueError) as ex:
         reporter._collect_data_points(reporter.registry, None)
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_invalid_tag(mock_post):
     """
         Test for invalid tag key when reporting data
@@ -239,7 +239,7 @@ def test_calling_report_now():
         reporter.report_now()
         assert_equals(mock_method.called, True)
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_zero_tags(mock_post):
     """
         Test that using reporter without tags does not raise error
@@ -257,7 +257,7 @@ def test_zero_tags(mock_post):
     counter_test.inc(2)
     reporter.report_now()
 
-@patch('apptuit.apptuit_client.requests.post')
+@patch('apptuit.apptuit_client.requests.Session.post')
 def test_zero_tags_with_host_disabled(mock_post):
     """
         Test that using reporter without tags raises error
