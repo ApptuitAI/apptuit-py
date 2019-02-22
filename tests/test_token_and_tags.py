@@ -122,8 +122,7 @@ def test_env_tags_with_host_tag_disabled_param():
     the disable_host_tag parameter to the reporter
     """
     token = "test_token"
-    disable_host_tag_true_values = ["True", "true"]
-    disable_host_tag_other_values = ["False", "false"]
+    disable_host_tag_values = [True, False, None]
     test_cases = [
         (" ", None),
         ("tagk1: 22, tagk2: tagv2", {"tagk1": "22", "tagk2": "tagv2"}),
@@ -135,21 +134,16 @@ def test_env_tags_with_host_tag_disabled_param():
                                                       "host": "myhost"})
     ]
     for env_tags_value, expected_global_tags in test_cases:
-        for disable_value in disable_host_tag_true_values:
-            mock_environ = patch.dict(os.environ, {APPTUIT_PY_TAGS: env_tags_value,
-                                                   DISABLE_HOST_TAG: disable_value})
+        for disable_value in disable_host_tag_values:
+            mock_environ = patch.dict(os.environ, {APPTUIT_PY_TAGS: env_tags_value})
             mock_environ.start()
-            reporter = ApptuitReporter(token=token, disable_host_tag=True)
-            assert_equals(reporter.tags, expected_global_tags)
-            mock_environ.stop()
-        for disable_value in disable_host_tag_other_values:
-            mock_environ = patch.dict(os.environ, {APPTUIT_PY_TAGS: env_tags_value,
-                                                   DISABLE_HOST_TAG: disable_value})
-            expected_global_tags = expected_global_tags.copy() if expected_global_tags else {}
-            if "host" not in expected_global_tags:
-                expected_global_tags["host"] = socket.gethostname()
-            mock_environ.start()
-            reporter = ApptuitReporter(token=token)
+            reporter = ApptuitReporter(token=token, disable_host_tag=disable_value)
+            if disable_value is None or disable_value is False:
+                if expected_global_tags:
+                    if "host" not in expected_global_tags:
+                        expected_global_tags["host"] = socket.gethostname()
+                else:
+                    expected_global_tags = {"host": socket.gethostname()}
             assert_equals(reporter.tags, expected_global_tags)
             mock_environ.stop()
 
