@@ -1,14 +1,13 @@
 """
 Apptuit Pyformance Reporter
 """
-from distutils.util import strtobool
 import os
 import socket
 import sys
 from pyformance import MetricsRegistry
 from pyformance.reporters.reporter import Reporter
 from apptuit import Apptuit, DataPoint, TimeSeriesName, ApptuitSendException
-from apptuit.utils import _get_tags_from_environment
+from apptuit.utils import _get_tags_from_environment, strtobool
 
 NUMBER_OF_TOTAL_POINTS = "apptuit.reporter.send.total"
 NUMBER_OF_SUCCESSFUL_POINTS = "apptuit.reporter.send.successful"
