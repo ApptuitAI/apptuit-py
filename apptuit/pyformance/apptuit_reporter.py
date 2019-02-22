@@ -1,16 +1,19 @@
 """
 Apptuit Pyformance Reporter
 """
+import os
+import socket
 import sys
 from pyformance import MetricsRegistry
 from pyformance.reporters.reporter import Reporter
-from apptuit import Apptuit, DataPoint, timeseries, ApptuitSendException
-from apptuit.utils import _get_tags_from_environment
+from apptuit import Apptuit, DataPoint, TimeSeriesName, ApptuitSendException
+from ..utils import _get_tags_from_environment, strtobool
 
 NUMBER_OF_TOTAL_POINTS = "apptuit.reporter.send.total"
 NUMBER_OF_SUCCESSFUL_POINTS = "apptuit.reporter.send.successful"
 NUMBER_OF_FAILED_POINTS = "apptuit.reporter.send.failed"
 API_CALL_TIMER = "apptuit.reporter.send.time"
+DISABLE_HOST_TAG = "APPTUIT_DISABLE_HOST_TAG"
 BATCH_SIZE = 50000
 
 def default_error_handler(status_code, successful, failed, errors):
@@ -39,7 +42,7 @@ class ApptuitReporter(Reporter):
 
     def __init__(self, registry=None, reporting_interval=10, token=None,
                  api_endpoint="https://api.apptuit.ai", prefix="", tags=None,
-                 error_handler=default_error_handler):
+                 error_handler=default_error_handler, disable_host_tag=None):
         """
         Parameters
         ----------
@@ -59,6 +62,8 @@ class ApptuitReporter(Reporter):
                 status_code is the HTTP status code of the failed API call, successful_points is
                 number of points processed succesfully, failed_points is number of failed points
                 and errors is a list of error messages describing reason of each failure.
+            disable_host_tag: By default a host tag will be added to all the metrics reported by
+                the reporter. Set disable_host_tag to False if you wish to disable it
         """
         super(ApptuitReporter, self).__init__(registry=registry,
                                               reporting_interval=reporting_interval)
@@ -70,6 +75,18 @@ class ApptuitReporter(Reporter):
             if self.tags is not None:
                 environ_tags.update(self.tags)
             self.tags = environ_tags
+
+        if disable_host_tag is None:
+            disable_host_tag = os.environ.get(DISABLE_HOST_TAG, False)
+            if disable_host_tag:
+                disable_host_tag = strtobool(disable_host_tag)
+
+        if not disable_host_tag:
+            if self.tags:
+                if self.tags.get("host") is None:
+                    self.tags["host"] = socket.gethostname()
+            else:
+                self.tags = {"host": socket.gethostname()}
         self.prefix = prefix if prefix is not None else ""
         self.__decoded_metrics_cache = {}
         self.client = Apptuit(token, api_endpoint, ignore_environ_tags=True)
@@ -136,7 +153,7 @@ class ApptuitReporter(Reporter):
         if val:
             return val[0], val[1]
 
-        metric_name, metric_tags = timeseries.decode_metric(key)
+        metric_name, metric_tags = TimeSeriesName.decode_metric(key)
         self.__decoded_metrics_cache[key] = (metric_name, metric_tags)
         return metric_name, metric_tags
 

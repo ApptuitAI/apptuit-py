@@ -226,7 +226,7 @@ class Apptuit(object):
             else:
                 error = "Server Error"
             raise ApptuitSendException("Apptuit.send() failed, Due to %d error" % (status_code),
-                                    status_code, 0, points_count, error)
+                                       status_code, 0, points_count, [])
 
     def query(self, query_str, start, end=None, retry_count=0, timeout=180):
         """
@@ -535,7 +535,7 @@ class ApptuitSendException(ApptuitException):
         super(ApptuitSendException, self).__init__(msg)
         self.msg = msg
         self.status_code = status_code
-        self.errors = errors or {}
+        self.errors = errors or []
         self.success = success
         self.failed = failed
 
