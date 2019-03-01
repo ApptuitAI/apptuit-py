@@ -3,15 +3,16 @@ Tests for token and global tags environment variables
 """
 
 import math
-import time
 import os
 import socket
+import time
 import warnings
+
 from nose.tools import assert_equals, assert_raises
 from pyformance import MetricsRegistry
 
 from apptuit import apptuit_client, Apptuit, DataPoint, APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS, \
-                    DEPRECATED_APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TOKEN
+    DEPRECATED_APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TOKEN
 from apptuit.pyformance import ApptuitReporter
 from apptuit.pyformance.apptuit_reporter import DISABLE_HOST_TAG
 
@@ -19,6 +20,7 @@ try:
     from unittest.mock import Mock, patch
 except ImportError:
     from mock import Mock, patch
+
 
 def test_token_positive():
     """
@@ -35,6 +37,7 @@ def test_token_positive():
         client = Apptuit(token=arg_token)
         assert_equals(client.token, expected)
         mock_environ.stop()
+
 
 def test_tags_env_variable_parsing_negative():
     """
@@ -54,6 +57,7 @@ def test_tags_env_variable_parsing_negative():
         with assert_raises(ValueError):
             apptuit_client._get_tags_from_environment()
         mock_environ.stop()
+
 
 def test_tags_env_variable_parsing_positive():
     """
@@ -78,6 +82,7 @@ def test_tags_env_variable_parsing_positive():
         reporter = ApptuitReporter(token=token)
         assert_equals(reporter.tags, expected_global_tags)
         mock_environ.stop()
+
 
 def test_env_tags_with_host_tag_disabled_env():
     """
@@ -115,6 +120,7 @@ def test_env_tags_with_host_tag_disabled_env():
             reporter = ApptuitReporter(token=token)
             assert_equals(reporter.tags, expected_global_tags)
             mock_environ.stop()
+
 
 def test_env_tags_with_host_tag_disabled_param():
     """
@@ -162,6 +168,7 @@ def test_token_negative():
         Apptuit(token=None)
     mock_environ.stop()
 
+
 def test_env_global_tags_positive():
     """
         Test that the client works with global tags env variable and without them
@@ -178,6 +185,7 @@ def test_env_global_tags_positive():
     client1 = Apptuit()
     assert_equals({}, client1._global_tags)
     mock_environ.stop()
+
 
 def test_env_global_tags_negative():
     """
@@ -196,6 +204,7 @@ def test_env_global_tags_negative():
         Apptuit()
     mock_environ.stop()
 
+
 def test_datapoint_tags_and_envtags():
     """
         Test that datapoint tags take priority when global tags env variable is present
@@ -203,7 +212,7 @@ def test_datapoint_tags_and_envtags():
     mock_environ = patch.dict(os.environ, {APPTUIT_PY_TOKEN: "environ_token",
                                            APPTUIT_PY_TAGS: 'host: host1, ip: 1.1.1.1'})
     mock_environ.start()
-    client = Apptuit()
+    client = Apptuit(None)
     timestamp = int(time.time())
     test_val = math.pi
     dp1 = DataPoint(metric="test_metric", tags={"host": "host2", "ip": "2.2.2.2", "test": 1},
@@ -219,6 +228,7 @@ def test_datapoint_tags_and_envtags():
     assert_equals(payload[3]["tags"], {"host": "host1", "ip": "1.1.1.1"})
     assert_equals(client._global_tags, {"host": "host1", "ip": "1.1.1.1"})
     mock_environ.stop()
+
 
 def test_no_environ_tags():
     """
@@ -247,6 +257,7 @@ def test_no_environ_tags():
     assert_equals(payload[0]["tags"], {'host': 'reporter', 'ip': '2.2.2.2'})
     mock_environ.stop()
 
+
 def test_reporter_tags_with_global_env_tags():
     """
         Test that reporter tags take priority
@@ -261,7 +272,6 @@ def test_reporter_tags_with_global_env_tags():
             7. global env tags: false, reporter tags: false, metric tags: true
             8. global env tags: false, reporter tags: false, metric tags: false
     """
-
 
     mock_environ = patch.dict(os.environ, {APPTUIT_PY_TOKEN: "environ_token",
                                            APPTUIT_PY_TAGS: 'host: environ, ip: 1.1.1.1'})
@@ -281,6 +291,7 @@ def test_reporter_tags_with_global_env_tags():
     assert_equals(payload[0]["tags"], {"host": "environ", "ip": "1.1.1.1"})
     mock_environ.stop()
 
+
 def test_tags_of_metric_take_priority():
     """
         Test that metric tags take priority
@@ -298,6 +309,7 @@ def test_tags_of_metric_take_priority():
     assert_equals(payload[0]["tags"], {"host": "metric", "ip": "3.3.3.3"})
     mock_environ.stop()
 
+
 def test_deprecated_tags_variable():
     """
     Test that reporter and client work with the deprecated tags env variable
@@ -310,6 +322,7 @@ def test_deprecated_tags_variable():
                                        tags={'host': 'reporter'})
     warnings.resetwarnings()
 
+
 def test_deprecated_token_variable():
     """
     Test that reporter and client work with the deprecated token env variable
@@ -318,6 +331,6 @@ def test_deprecated_token_variable():
     with patch.dict(os.environ, {DEPRECATED_APPTUIT_PY_TOKEN: "test_token"}):
         registry = MetricsRegistry()
         with assert_raises(DeprecationWarning):
-            reporter = ApptuitReporter(registry=registry,
-                                       tags={'host': 'reporter'})
+            ApptuitReporter(registry=registry,
+                            tags={'host': 'reporter'})
     warnings.resetwarnings()

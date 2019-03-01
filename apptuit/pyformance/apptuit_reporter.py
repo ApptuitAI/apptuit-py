@@ -1,12 +1,16 @@
+# coding=utf-8
 """
 Apptuit Pyformance Reporter
 """
 import os
 import socket
 import sys
+
 from pyformance import MetricsRegistry
 from pyformance.reporters.reporter import Reporter
-from apptuit import Apptuit, DataPoint, TimeSeriesName, ApptuitSendException
+
+from apptuit.apptuit_client import Apptuit, DataPoint, ApptuitSendException, TimeSeriesName
+from .process_metrics import ProcessMetrics
 from ..utils import _get_tags_from_environment, strtobool
 
 NUMBER_OF_TOTAL_POINTS = "apptuit.reporter.send.total"
@@ -15,6 +19,7 @@ NUMBER_OF_FAILED_POINTS = "apptuit.reporter.send.failed"
 API_CALL_TIMER = "apptuit.reporter.send.time"
 DISABLE_HOST_TAG = "APPTUIT_DISABLE_HOST_TAG"
 BATCH_SIZE = 50000
+
 
 def default_error_handler(status_code, successful, failed, errors):
     """
@@ -33,6 +38,7 @@ def default_error_handler(status_code, successful, failed, errors):
           (failed, successful + failed, status_code, str(errors))
     sys.stderr.write(msg)
 
+
 class ApptuitReporter(Reporter):
     """
         Pyformance based reporter for Apptuit. It provides high level
@@ -42,7 +48,8 @@ class ApptuitReporter(Reporter):
 
     def __init__(self, registry=None, reporting_interval=10, token=None,
                  api_endpoint="https://api.apptuit.ai", prefix="", tags=None,
-                 error_handler=default_error_handler, disable_host_tag=None):
+                 error_handler=default_error_handler, disable_host_tag=None,
+                 collect_process_metrics=False, sanitize_mode="prometheus"):
         """
         Parameters
         ----------
@@ -60,10 +67,16 @@ class ApptuitReporter(Reporter):
                 default writes the errors to stderr. The expected signature of an error handler
                 is: error_handler(status_code, successful_points, failed_points, errors). Here
                 status_code is the HTTP status code of the failed API call, successful_points is
-                number of points processed succesfully, failed_points is number of failed points
+                number of points processed successfully, failed_points is number of failed points
                 and errors is a list of error messages describing reason of each failure.
             disable_host_tag: By default a host tag will be added to all the metrics reported by
                 the reporter. Set disable_host_tag to False if you wish to disable it
+            collect_process_metrics: A boolean variable specifying if process metrics should be
+                collected or not, if set to True then process metrics will be collected. By default,
+                this will collect resource, thread, and gc metrics.
+            sanitize_mode: Is a string value which will enable sanitizer, sanitizer will
+                    automatically change your metric names to be compatible with apptuit
+                    or prometheus. Set it to None if not needed.
         """
         super(ApptuitReporter, self).__init__(registry=registry,
                                               reporting_interval=reporting_interval)
@@ -75,7 +88,6 @@ class ApptuitReporter(Reporter):
             if self.tags is not None:
                 environ_tags.update(self.tags)
             self.tags = environ_tags
-
         if disable_host_tag is None:
             disable_host_tag = os.environ.get(DISABLE_HOST_TAG, False)
             if disable_host_tag:
@@ -88,12 +100,20 @@ class ApptuitReporter(Reporter):
             else:
                 self.tags = {"host": socket.gethostname()}
         self.prefix = prefix if prefix is not None else ""
-        self.__decoded_metrics_cache = {}
-        self.client = Apptuit(token, api_endpoint, ignore_environ_tags=True)
+        self.client = Apptuit(token=token, api_endpoint=api_endpoint,
+                              ignore_environ_tags=True, sanitize_mode=sanitize_mode)
         self._meta_metrics_registry = MetricsRegistry()
         self.error_handler = error_handler
+        self.process_metrics = None
+        if collect_process_metrics:
+            self.process_metrics = ProcessMetrics(self.registry)
 
     def _update_counter(self, key, value):
+        """
+        To increment the counter with `key` by `value`.
+        :param key: Name of counter.
+        :param value: value to increment.
+        """
         self._meta_metrics_registry.counter(key).inc(value)
 
     def report_now(self, registry=None, timestamp=None):
@@ -103,6 +123,8 @@ class ApptuitReporter(Reporter):
             registry: pyformance Registry containing all metrics
             timestamp: timestamp of the data point
         """
+        if self.process_metrics:
+            self.process_metrics.collect_process_metrics()
         dps = self._collect_data_points(registry or self.registry, timestamp)
         meta_dps = self._collect_data_points(self._meta_metrics_registry)
         if not dps:
@@ -140,8 +162,8 @@ class ApptuitReporter(Reporter):
                                        (failed_count, dps_len), success=success_count,
                                        failed=failed_count, errors=errors)
 
-
-    def _get_tags(self, key):
+    @staticmethod
+    def _get_tags(key):
         """
         Get tags of a metric
         Params:
@@ -149,12 +171,7 @@ class ApptuitReporter(Reporter):
         Returns:
             metric name, dictionary of tags
         """
-        val = self.__decoded_metrics_cache.get(key)
-        if val:
-            return val[0], val[1]
-
         metric_name, metric_tags = TimeSeriesName.decode_metric(key)
-        self.__decoded_metrics_cache[key] = (metric_name, metric_tags)
         return metric_name, metric_tags
 
     def _collect_data_points(self, registry, timestamp=None):
@@ -180,7 +197,8 @@ class ApptuitReporter(Reporter):
             else:
                 tags = global_tags
             for value_key in metrics[key].keys():
-                dp = DataPoint(metric="{0}{1}.{2}".format(self.prefix, metric_name, value_key),
-                               tags=tags, timestamp=timestamp, value=metrics[key][value_key])
-                dps.append(dp)
+                data_point = DataPoint(
+                    metric=self.prefix + metric_name + '.' + value_key,
+                    tags=tags, timestamp=timestamp, value=metrics[key][value_key])
+                dps.append(data_point)
         return dps

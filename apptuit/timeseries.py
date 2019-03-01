@@ -4,6 +4,12 @@
 
 import json
 
+try:
+    from functools import lru_cache
+except ImportError:
+    from backports.functools_lru_cache import lru_cache
+
+
 def encode_metric(metric_name, metric_tags):
     """
     Generate an encoded metric name by combining metric_name and metric_tags
@@ -27,6 +33,7 @@ def encode_metric(metric_name, metric_tags):
     return encoded_metric_name
 
 
+@lru_cache(maxsize=2048)
 def decode_metric(encoded_metric_name):
     """
     Decode the metric name as encoded by encode_metric_name
