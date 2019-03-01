@@ -54,10 +54,22 @@ It uses [Pyformance](https://github.com/omergertel/pyformance/) underneath.
 The Apptuit client object can be created as simply as the following line:
 ```python
 from apptuit import Apptuit
-client = Apptuit(token=my_apptuit_token, global_tags={"service": "order-service"})
+client = Apptuit(token=my_apptuit_token, global_tags={"service": "order-service"}, sanitize_mode="prometheus")
 ```
 - `token`: should be your apptuit token
 - `global_tags`: should be the set of default tags you want to apply on all your data. It is an optional parameter
+- `sanitize_mode`: Is a string value which specifies the sanitization mode to be used
+for metric names and tag keys. 
+You can set `sanitize_mode` to three values.
+    - `None`: Disables sanitization.
+    - `apptuit`: Will set the sanitize mode to apptuit, which will replace
+    all the invalid characters with `_`. Valid characters in this mode are all
+    ASCII letters, digits, `/`, `-`, `.`, `_` and Unicode letters.
+    Anyhing else is invalid character.
+    - `prometheus`: Will set the sanitize mode to prometheus, which will replace
+    all the invalid characters with `_`. Valid characters in this mode are ASCII letters, digits
+    and `_`, anything else is considered invalid.
+
 
 Apart from these, the Apptuit constructor takes a couple of more optional parameters explained below:
 
@@ -96,17 +108,8 @@ Here:
 - `collect_process_metrics`: Is a boolean value which will enable or disable collection 
 of various process metrics like (Resource, GC, and Thread). If it is `True` then process 
 metrics will be collected. various process metrics are [here](#python-process-metrics).
-- `sanitize_mode`: Is a string value which specifies the sanitization mode to be used
-for metric names and tag keys. 
-You can set `sanitize_mode` to three values.
-    - `None`: Disables sanitization.
-    - `apptuit`: Will set the sanitize mode to apptuit, which will replace
-    all the invalid characters with `_`. Valid characters in this mode are all
-    ASCII letters, digits, `/`, `-`, `.`, `_` and Unicode letters.
-    Anyhing else is invalid character.
-    - `prometheus`: Will set the sanitize mode to prometheus, which will replace
-    all the invalid characters with `_`. Valid characters in this mode are ASCII letters, digits
-    and `_`, anything else is considered invalid.
+- `sanitize_mode`: This is same as the `sanitize_mode` parameter for the
+client (see above in client usage example).
 
 
 #### Configuration
