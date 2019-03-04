@@ -512,7 +512,7 @@ def test_prometheus_sanitizer_of_reporter(mock_post):
     """
     mock_post.return_value.status_code = 200
     token = "asdashdsauh_8aeraerf"
-    tags = {"host": "localhost", "region-loc": "us-east-1", "service.type/name": "web-server"}
+    tags = {"host": "localhost", u"region-loc-本語": u"us-east-1-本語", "service.type/name": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(sanitize_mode="prometheus",
                                registry=registry,
@@ -534,7 +534,7 @@ def test_prometheus_sanitizer_of_reporter(mock_post):
     payload = reporter.client._create_payload_from_datapoints(dps)
     assert_equals(len(payload), 1)
     assert_equals(payload[0]['metric'], "_7_cpu_time_seconds_count")
-    assert_equals(payload[0]['tags'], {'host': 'localhost', 'region_loc': 'us-east-1',
+    assert_equals(payload[0]['tags'], {'host': 'localhost', 'region_loc_': u'us-east-1-本語',
                                        'service_type_name': 'web-server', 'total_': '100'})
     assert_equals(payload[0]['value'], 1)
     reporter.report_now()
@@ -555,7 +555,7 @@ def test_prometheus_sanitizer_of_reporter_disabled(mock_post):
     """
     mock_post.return_value.status_code = 200
     token = "asdashdsauh_8aeraerf"
-    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    tags = {"host": "localhost", u"region-本語": "us-east-1", "service": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(sanitize_mode=None, registry=registry,
                                api_endpoint="http://localhost",
@@ -567,6 +567,7 @@ def test_prometheus_sanitizer_of_reporter_disabled(mock_post):
     dps = reporter._collect_data_points(reporter.registry)
     payload = reporter.client._create_payload_from_datapoints(dps)
     assert_equals(payload[0]['metric'], u'abc.日本語.count')
+    assert_equals(payload[0]['tags'], tags)
     assert_equals(payload[0]['value'], 1)
     registry.clear()
     cput = registry.counter("cpu.time")
@@ -594,7 +595,7 @@ def test_apptuit_sanitizer_of_reporter(mock_post):
     """
     mock_post.return_value.status_code = 200
     token = "asdashdsauh_8aeraerf"
-    tags = {"host": "localhost", "region-loc": "us-east-1", "service.type/name": "web-server"}
+    tags = {"host": "localhost", u"region-loc$-本語": u"us-east-1-本語", "service.type/name": "web-server"}
     registry = MetricsRegistry()
     reporter = ApptuitReporter(sanitize_mode="apptuit",
                                registry=registry,
@@ -608,6 +609,7 @@ def test_apptuit_sanitizer_of_reporter(mock_post):
     dps = reporter._collect_data_points(reporter.registry)
     payload = reporter.client._create_payload_from_datapoints(dps)
     assert_equals(payload[0]['metric'], u'abc.日本語.count')
+    assert_equals(payload[0]['tags'], {"host": "localhost", u"region-loc_-本語": u"us-east-1-本語", "service.type/name": "web-server"})
     assert_equals(payload[0]['value'], 1)
     registry.clear()
     cput = registry.counter('7&&cpu-time/seconds{"total-%": "100"}')
@@ -616,8 +618,7 @@ def test_apptuit_sanitizer_of_reporter(mock_post):
     payload = reporter.client._create_payload_from_datapoints(dps)
     assert_equals(len(payload), 1)
     assert_equals(payload[0]['metric'], "7_cpu-time/seconds.count")
-    assert_equals(payload[0]['tags'], {'host': 'localhost', 'region-loc': 'us-east-1',
-                                       'service.type/name': 'web-server', 'total-_': '100'})
+    assert_equals(payload[0]['tags'], {'host': 'localhost', u'region-loc_-本語': u'us-east-1-本語', 'service.type/name': 'web-server', 'total-_': '100'})
     assert_equals(payload[0]['value'], 1)
     reporter.report_now()
     dps = reporter._collect_data_points(reporter._meta_metrics_registry)
