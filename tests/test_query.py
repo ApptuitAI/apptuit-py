@@ -147,7 +147,7 @@ def test_multiple_retries(mock_get):
     """
     mock_get.return_value.content = get_mock_response()
     mock_get.return_value.status_code = 504
-    mock_get.side_effect = requests.exceptions.HTTPError
+    mock_get.return_value.raise_for_status.side_effect = requests.exceptions.HTTPError
     token = 'sdksdk203afdsfj_sadasd3939'
     client = Apptuit(sanitize_mode=None, token=token)
     query = "fetch('nyc.taxi.rides')"
@@ -164,7 +164,7 @@ def test_get_error(mock_get):
     """
     mock_get.return_value.content = get_mock_response()
     mock_get.return_value.status_code = 504
-    mock_get.side_effect = requests.exceptions.HTTPError()
+    mock_get.return_value.raise_for_status.side_effect = requests.exceptions.HTTPError
     token = 'sdksdk203afdsfj_sadasd3939'
     client = Apptuit(sanitize_mode=None, token=token)
     query = "fetch('nyc.taxi.rides')"
