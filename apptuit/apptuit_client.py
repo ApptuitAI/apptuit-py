@@ -328,6 +328,7 @@ class Apptuit(object):
         if self.token:
             headers["Authorization"] = "Bearer " + self.token
         hresp = requests.get(query_string, headers=headers, timeout=timeout)
+        hresp.raise_for_status()
         body = hresp.content
         return _parse_response(body, start, end)
 
