@@ -1,8 +1,30 @@
+#
+# Copyright 2018 Agilx, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 """
     Utility functions for timeseries
 """
 
 import json
+
+try:
+    from functools import lru_cache
+except ImportError:
+    from backports.functools_lru_cache import lru_cache
+
 
 def encode_metric(metric_name, metric_tags):
     """
@@ -27,6 +49,7 @@ def encode_metric(metric_name, metric_tags):
     return encoded_metric_name
 
 
+@lru_cache(maxsize=2048)
 def decode_metric(encoded_metric_name):
     """
     Decode the metric name as encoded by encode_metric_name

@@ -1,22 +1,56 @@
+#
+# Copyright 2018 Agilx, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 """
 Client module for Apptuit APIs
 """
-
-import os
-from collections import defaultdict
 import json
-from apptuit.utils import _contains_valid_chars, _get_tags_from_environment, _validate_tags
-from apptuit import APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS
+import os
+import sys
+import time
+import warnings
+import zlib
+from collections import defaultdict
+
+import requests
+
+from apptuit import APPTUIT_PY_TOKEN, APPTUIT_PY_TAGS, DEPRECATED_APPTUIT_PY_TOKEN, __version__
+from apptuit.utils import _contains_valid_chars, _get_tags_from_environment, \
+    _validate_tags, sanitize_name_prometheus, sanitize_name_apptuit
 
 try:
     from urllib import quote
 except ImportError:
     from urllib.parse import quote
-import sys
-import time
-import zlib
-import requests
-import pandas as pd
+
+try:
+    from functools import lru_cache
+except ImportError:
+    from backports.functools_lru_cache import lru_cache
+
+MAX_TAGS_LIMIT = 25
+SANITIZERS = {
+    "apptuit": sanitize_name_apptuit,
+    "prometheus": sanitize_name_prometheus
+}
+
+
+def _get_user_agent():
+    py_version = sys.version.split()[0]
+    return "apptuit-py-" + __version__ + ", requests-" + requests.__version__ + ", Py-" + py_version
 
 
 def _generate_query_string(query_string, start, end):
@@ -26,10 +60,11 @@ def _generate_query_string(query_string, start, end):
     ret += "&q=" + quote(query_string, safe='')
     return ret
 
+
 def _parse_response(resp, start, end=None):
     json_resp = json.loads(resp)
     outputs = json_resp["outputs"]
-    if not outputs: # Pythonic way of checking if list is empty
+    if not outputs:  # Pythonic way of checking if list is empty
         return None
     qresult = QueryResult(start, end)
     for output in outputs:
@@ -54,110 +89,211 @@ def _parse_response(resp, start, end=None):
             qresult[output_id].series.append(series)
     return qresult
 
+
 class Apptuit(object):
     """
-    Apptuit is the client object, encapsulating the functionalities provided by Apptuit APIs
+    Apptuit client - providing APIs to send and query data from Apptuit
     """
 
     def __init__(self, token=None, api_endpoint="https://api.apptuit.ai",
-                 global_tags=None, ignore_environ_tags=False, debug=False):
+                 global_tags=None, ignore_environ_tags=False,
+                 sanitize_mode="prometheus"):
         """
-        Creates an apptuit client object
+        Create an apptuit client object
         Params:
-            token: Token of the tenant to which we wish to connect
+            token: Apptuit token for your tenant
             api_endpoint: Apptuit API End point (including the protocol and port)
-            global_tags: Tags for all datapoints (should be a dict),if you pass
-                    global_tags, environmental tags will not be used,
-                    even if ignore_environ_tags is false.
-            ignore_environ_tags: A boolean value to include environmental variable or not
+            global_tags: Tags for all datapoints (should be a dict). If you pass
+                    value for global_tags, the APPTUIT_PY_TAGS environment variable
+                    will not be used, even if ignore_environ_tags is false.
+            ignore_environ_tags: True/False - whether to use environment variable for
+                    global tags (APPTUIT_PY_TAGS)
+            sanitize_mode: Is a string value which will enable sanitizer, sanitizer will
+                    automatically change your metric names to be compatible with apptuit
+                    or prometheus. Set it to None if not needed.
         """
-        self.token = token
-        if not self.token:
-            self.token = os.environ.get(APPTUIT_PY_TOKEN)
-            if not self.token:
+        self.sanitizer = None
+        if sanitize_mode:
+            self.sanitizer = SANITIZERS.get(sanitize_mode.lower(), None)
+            if not self.sanitizer:
+                raise ValueError("sanitizer_mode can only be set to apptuit"
+                                 ",prometheus or None.")
+        if not token:
+            token = os.environ.get(APPTUIT_PY_TOKEN)
+            if not token:
+                token = os.environ.get(DEPRECATED_APPTUIT_PY_TOKEN)
+                if token:
+                    warnings.warn("The environment variable %s is deprecated,"
+                                  "please use %s instead" %
+                                  (DEPRECATED_APPTUIT_PY_TOKEN, APPTUIT_PY_TOKEN),
+                                  DeprecationWarning)
+            if not token:
                 raise ValueError("Missing Apptuit API token, "
                                  "either pass it as a parameter or "
                                  "set as value of the environment variable '"
                                  + APPTUIT_PY_TOKEN + "'.")
+        self.token = token
         if not api_endpoint:
             raise ValueError("Invalid value for the 'api_endpoint' parameter")
 
         self.endpoint = api_endpoint
         if self.endpoint[-1] == '/':
             self.endpoint = self.endpoint[:-1]
-        self.debug = debug
         self._global_tags = global_tags
         if not self._global_tags and not ignore_environ_tags:
             self._global_tags = _get_tags_from_environment()
 
+    @property
+    def put_apiurl(self):
+        """
+        Apptuit PUT API URL
+        """
+        return self.endpoint + "/api/put?details"
 
-    def _create_payload(self, datapoints):
-        data = []
-        for dp in datapoints:
-            if dp.tags and self._global_tags:
-                tags = self._global_tags.copy()
-                tags.update(dp.tags)
-            elif dp.tags:
-                tags = dp.tags
+    def _combine_tags_with_globaltags(self, tags):
+        if tags:
+            if self._global_tags:
+                combined_tags = self._global_tags.copy()
+                combined_tags.update(tags)
             else:
-                tags = self._global_tags
+                combined_tags = tags
+            return combined_tags
+        elif self._global_tags:
+            return self._global_tags
+        return None
+
+    def _create_payload_from_datapoints(self, datapoints):
+        data = []
+        for point in datapoints:
+            if self.sanitizer:
+                sanitized_metric = self.sanitizer(point.metric)
+            else:
+                if not _contains_valid_chars(point.metric):
+                    raise ValueError("Metric Name %s contains an invalid character, "
+                                     "allowed characters are unicode letter, "
+                                     "a-z, A-Z, 0-9, -, _, ., and /" % point.metric)
+                sanitized_metric = point.metric
+            tags = self._combine_tags_with_globaltags(point.tags)
             if not tags:
                 raise ValueError("Missing tags for the metric "
-                                 + dp.metric +
+                                 + point.metric +
                                  ". Either pass it as value of the tags"
                                  " parameter to DataPoint or"
                                  " set environment variable '"
                                  + APPTUIT_PY_TAGS +
                                  "' for global tags")
-            row = {}
-            row["metric"] = dp.metric
-            row["timestamp"] = dp.timestamp
-            row["value"] = dp.value
+            if len(tags) > MAX_TAGS_LIMIT:
+                raise ValueError("Too many tags for datapoint %s, maximum allowed number of tags "
+                                 "is %d, found %d tags" % (point, MAX_TAGS_LIMIT, len(tags)))
+            if self.sanitizer:
+                sanitized_tags = {}
+                for key, val in tags.items():
+                    sanitized_tags[self.sanitizer(key)] = val
+                tags = sanitized_tags
+            else:
+                _validate_tags(tags)
+            row = dict()
+            row["metric"] = sanitized_metric
+            row["timestamp"] = point.timestamp
+            row["value"] = point.value
             row["tags"] = tags
             data.append(row)
         return data
 
-    def send(self, datapoints):
+    def _create_payload_from_timeseries(self, timeseries_list):
+        data = []
+        points_count = 0
+        for timeseries in timeseries_list:
+            tags = self._combine_tags_with_globaltags(timeseries.tags)
+            if not tags:
+                raise ValueError("Missing tags for the metric '%s'. Either pass it as value "
+                                 "of the tags parameter to TimeSeriesName, or set environment "
+                                 "variable '%s' for global tags, or pass 'global_tags' parameter "
+                                 "to the apptuit_client" % (timeseries.metric, APPTUIT_PY_TAGS))
+
+            if len(tags) > MAX_TAGS_LIMIT:
+                raise ValueError("Too many tags for timeseries %s, maximum allowed number of tags "
+                                 "is %d, found %d tags" % (timeseries, MAX_TAGS_LIMIT, len(tags)))
+            for timestamp, value in zip(timeseries.timestamps, timeseries.values):
+                row = {"metric": timeseries.metric,
+                       "tags": tags,
+                       "timestamp": timestamp,
+                       "value": value}
+                data.append(row)
+                points_count += 1
+        return data, points_count
+
+    def send(self, datapoints, timeout=60):
         """
-        Send the given set of datapoints to Apptuit for storing
+        Send the given set of datapoints to Apptuit
         Params:
             datapoints: A list of DataPoint objects
-        It raises an ApptuitException in case the backend API responds with an error
+            timeout: Timeout (in seconds) for the HTTP request
+        It raises an ApptuitSendException in case the backend API responds with an error
         """
         if not datapoints:
             return
-        url = self.endpoint + "/api/put?sync&sync=60000&details"
-        data = self._create_payload(datapoints)
-        body = json.dumps(data)
+        payload = self._create_payload_from_datapoints(datapoints)
+        self.__send(payload, len(datapoints), timeout)
+
+    def send_timeseries(self, timeseries_list, timeout=60):
+        """
+        Send a list of timeseries to Apptuit
+        Parameters
+        ----------
+            timeseries_list: A list of TimeSeries objects
+            timeout: Timeout (in seconds) for the HTTP request
+        """
+        if not timeseries_list:
+            return
+        data, points_count = self._create_payload_from_timeseries(timeseries_list)
+        if points_count != 0:
+            self.__send(data, points_count, timeout)
+
+    @staticmethod
+    def __get_size_in_mb(buf):
+        return sys.getsizeof(buf) * 1.0 / (1024 ** 2)
+
+    def __send(self, payload, points_count, timeout):
+        body = json.dumps(payload)
         body = zlib.compress(body.encode("utf-8"))
-        headers = {}
+        headers = dict()
         headers["Authorization"] = "Bearer " + self.token
         headers["Content-Type"] = "application/json"
         headers["Content-Encoding"] = "deflate"
-        response = requests.post(url, data=body, headers=headers)
+        headers["User-Agent"] = _get_user_agent()
+        response = requests.post(self.put_apiurl, data=body, headers=headers, timeout=timeout)
         if response.status_code != 200 and response.status_code != 204:
             status_code = response.status_code
             if status_code == 400:
                 resp_json = response.json()
                 raise ApptuitSendException(
-                    "Apptuit.send() failed, Due to %d error" % (status_code),
+                    "Apptuit.send() failed due to %d error" % status_code,
                     status_code, resp_json["success"],
                     resp_json["failed"], resp_json["errors"]
                 )
-            elif status_code == 401:
-                error = "Apptuit API token is invalid."
+            if status_code == 413:
+                raise ApptuitSendException("Too big payload for Apptuit.send(). Trying to send"
+                                           " %f mb of data with %d points, please try sending "
+                                           "again with fewer points" %
+                                           (self.__get_size_in_mb(body), points_count),
+                                           status_code, 0, points_count)
+            if status_code == 401:
+                error = "Apptuit API token is invalid"
             else:
-                error = "Server Error."
-            raise ApptuitSendException("Apptuit.send() failed, Due to %d error" % (status_code),
-                                       status_code, 0, len(datapoints), error)
+                error = "Server Error"
+            raise ApptuitSendException("Apptuit.send() failed, due to %d: %s" %
+                                       (status_code, error),
+                                       status_code, 0, points_count, [])
 
-    def query(self, query_str, start, end=None, retry_count=0):
+    def query(self, query_str, start, end=None, retry_count=0, timeout=180):
         """
             Execute the given query on Query service
             Params:
                 query_str - The query string
                 start - the start timestamp (unix epoch in seconds)
                 end - the end timestamp (unix epoch in seconds)
+                timeout - timeout (in seconds) for the HTTP request
             Returns a QueryResult object
             Individual queried items can be accessed by indexing the result object using either
             the integer index of the metric in the query or the metric name.
@@ -177,7 +313,7 @@ class Apptuit(object):
         """
         try:
             url = self.__generate_request_url(query_str, start, end)
-            return self._execute_query(url, start, end)
+            return self._execute_query(url, start, end, timeout)
         except (requests.exceptions.HTTPError, requests.exceptions.SSLError) as e:
             if retry_count > 0:
                 time.sleep(1)
@@ -186,19 +322,19 @@ class Apptuit(object):
                 raise ApptuitException("Failed to get response from Apptuit"
                                        "query service due to exception: %s" % str(e))
 
-    def _execute_query(self, query_string, start, end):
-        headers = {}
+    def _execute_query(self, query_string, start, end, timeout):
+        headers = dict()
+        headers["User-Agent"] = _get_user_agent()
         if self.token:
             headers["Authorization"] = "Bearer " + self.token
-        hresp = requests.get(query_string, headers=headers)
-        if self.debug:
-            sys.stderr.write('%s\n' % hresp.url)
+        hresp = requests.get(query_string, headers=headers, timeout=timeout)
+        hresp.raise_for_status()
         body = hresp.content
         return _parse_response(body, start, end)
 
     def __generate_request_url(self, query_string, start, end):
         query_string = self.endpoint + "/api/query" + \
-            _generate_query_string(query_string, start, end)
+                       _generate_query_string(query_string, start, end)
         return query_string
 
 
@@ -208,32 +344,62 @@ class TimeSeries(object):
     the data (the index and the values)
     """
 
-    def __init__(self, metric, tags, index, values):
-        self.metric = metric
-        self.tags = tags
-        if index is None and values is not None:
+    def __init__(self, metric, tags, index=None, values=None):
+        self.name = TimeSeriesName(metric, tags)
+        if not index and values:
             raise ValueError("index cannot be None if values is not None")
-        if index is not None and values is None:
+        if index and not values:
             raise ValueError("values cannot be None if index is not None")
-        if index is not None and values is not None:
+        if index and values:
             if len(index) != len(values):
                 raise ValueError("Length of index and values must be equal")
-            self.timestamps = index
-            self.values = values
-        else:
-            self.timestamps = []
-            self.values = []
+        self.timestamps = index or []
+        self.values = values or []
+
+    @property
+    def tags(self):
+        return self.name.tags
 
     @property
     def metric(self):
-        return self._metric
+        return self.name.metric
 
-    @metric.setter
-    def metric(self, metric):
-        if not _contains_valid_chars(metric):
-            raise ValueError("metric contains characters which are not allowed, "
-                             "only characters [a-z], [A-Z], [0-9] and [-_./] are allowed")
-        self._metric = str(metric)
+    def __repr__(self):
+        repr_str = '%s{' % self.name.metric
+        for tagk in sorted(self.name.tags):
+            tagv = self.name.tags[tagk]
+            repr_str = repr_str + '%s:%s, ' % (tagk, tagv)
+        repr_str = repr_str[:-2] + '}'
+        return repr_str
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __len__(self):
+        return len(self.timestamps)
+
+    def add_point(self, timestamp, value):
+        """
+        Add a new point to the timeseries object
+        """
+        self.timestamps.append(timestamp)
+        self.values.append(float(value))
+
+
+class TimeSeriesName(object):
+    """
+    Encapsulates a timeseries name representation by using the metric name and tags
+    """
+
+    def __init__(self, metric, tags):
+        """
+        Parameters
+        ----------
+            metric: name of the metric
+            tags: tags for the metric (expected a dict type)
+        """
+        self.metric = metric
+        self.tags = tags
 
     @property
     def tags(self):
@@ -241,21 +407,74 @@ class TimeSeries(object):
 
     @tags.setter
     def tags(self, tags):
-        if not isinstance(tags, dict):
-            raise ValueError("tags parameter is expected to be a dict type")
-        _validate_tags(tags)
+        if tags:
+            for key in tags:
+                if not key:
+                    raise ValueError("Tag key can't be '%s'" % key)
+
         self._tags = tags
 
-    def __repr__(self):
-        repr_str = '%s{' % self.metric
-        for tagk in sorted(self.tags):
-            tagv = self.tags[tagk]
-            repr_str = repr_str + '%s:%s, ' % (tagk, tagv)
-        repr_str = repr_str[:-2] + '}'
-        return repr_str
+    @property
+    def metric(self):
+        return self._metric
+
+    @metric.setter
+    def metric(self, metric):
+        if not metric:
+            raise ValueError("metric name cannot be None or empty")
+        self._metric = metric
 
     def __str__(self):
-        return self.__repr__()
+        return self.metric + json.dumps(self.tags, sort_keys=True)
+
+    @staticmethod
+    def encode_metric(metric_name, metric_tags):
+        """
+        Generate an encoded metric name by combining metric_name and metric_tags
+        Params:
+            metric_name: name of the metric
+            metric_tags: tags (expected a dictionary of tag keys vs values)
+        Returns: An string encoding the metric name and the tags which can be used when
+                    creating metric objects, such as counters, timers etc.
+        Example:
+            s = reporter.encode_metric_name('node.cpu', {"type": "idle"})
+            print(s) # 'node.cpu {"type": "idle"}'
+        """
+        if not isinstance(metric_name, str):
+            raise ValueError("metric_name should be a string")
+        if metric_name == "":
+            raise ValueError("metric_name cannot be empty")
+        if not isinstance(metric_tags, dict):
+            raise ValueError("metric_tags must be a dictionary")
+
+        encoded_metric_name = metric_name + json.dumps(metric_tags, sort_keys=True)
+        return encoded_metric_name
+
+    @staticmethod
+    @lru_cache(maxsize=2048)
+    def decode_metric(encoded_metric_name):
+        """
+        Decode the metric name as encoded by encode_metric_name
+        Params:
+            encoded_metric_name: a string encoded in a format as returned by encode_metric_name()
+            example: 'metricName {"metricTagKey1":"metricValue1","metricTagKey2":"metricValue2"}'
+        Returns:
+            The metric name and the dictionary of tags
+        """
+        if encoded_metric_name is None or encoded_metric_name == "":
+            raise ValueError("Invalid value for encoded_metric_name")
+
+        metric_tags = {}
+        metric_name = encoded_metric_name.strip()
+        brace_index = encoded_metric_name.find('{')
+        if brace_index > -1:
+            try:
+                metric_tags = json.loads(encoded_metric_name[brace_index:])
+                metric_name = encoded_metric_name[:brace_index].strip()
+            except Exception as err:
+                raise ValueError("Failed to parse the encoded_metric_name %s, invalid format"
+                                 % encoded_metric_name, err)
+        return metric_name, metric_tags
 
 
 class Output(object):
@@ -264,15 +483,15 @@ class Output(object):
     objects representing each time series returned for the query.
     """
 
-    def __init__(self, debug=False):
+    def __init__(self):
         self.series = []
         self.__dataframe = None
-        self.debug = debug
 
     def to_df(self, tz=None):
         """
             Create a Pandas DataFrame from this data
         """
+        import pandas as pd
         series_names = []
         series_list = []
         for s in self.series:
@@ -285,6 +504,7 @@ class Output(object):
         dataframe.columns = series_names
         self.__dataframe = dataframe
         return dataframe
+
 
 class QueryResult(object):
     """
@@ -303,8 +523,8 @@ class QueryResult(object):
 
     def __repr__(self):
         return '{start: %d, end: %s, outputs: %s}' % \
-        (self.start, str(self.end) if self.end is not None else '',
-         ', '.join(self.__outputs.keys()))
+               (self.start, str(self.end) if self.end is not None else '',
+                ', '.join(self.__outputs.keys()))
 
     def __setitem__(self, key, value):
         self.__outputs[key] = value
@@ -331,65 +551,36 @@ class DataPoint(object):
             timestamp: Number of seconds since Unix epoch
             value: value of the metric at this timestamp (int or float)
         """
-        self.metric = metric
-        self.tags = tags
         self.timestamp = timestamp
-        self.value = value
+        self.timeseries_name = TimeSeriesName(metric, tags)
+        try:
+            self.value = float(value)
+        except TypeError:
+            raise ValueError("Expected a numeric value got %s" % value)
 
     @property
     def metric(self):
-        return self._metric
-
-    @metric.setter
-    def metric(self, metric):
-        if not _contains_valid_chars(metric):
-            raise ValueError("Metric name contains invalid character(s), "
-                             "allowed characters are a-z, A-Z, 0-9, -, _, ., and /")
-        self._metric = metric
+        return self.timeseries_name.metric
 
     @property
     def tags(self):
-        return self._tags
-
-    @tags.setter
-    def tags(self, tags):
-        self._tags = None
-        if tags is None:
-            return
-        if not isinstance(tags, dict):
-            raise ValueError("Expected a value of type dict for tags")
-        _validate_tags(tags)
-        self._tags = tags
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        if isinstance(value, (int, float)):
-            self._value = value
-        elif isinstance(value, str):
-            try:
-                self._value = float(value)
-            except ValueError:
-                raise ValueError("Expected a numeric value got %s" % value)
-        else:
-            raise ValueError("Expected a numeric value for the value parameter")
+        return self.timeseries_name.tags
 
     def __repr__(self):
-        repr = self.metric + "{"
-        for tagk, tagv in self.tags.items():
-            repr = repr + "%s:%s, " % (tagk, tagv)
-        repr = repr[:-2] + ", timestamp: %d, value: %f}" % (self.timestamp, self.value)
-        return repr
+        _repr = self.metric + "{"
+        for tagk in sorted(self.tags):
+            _repr = _repr + "%s:%s, " % (tagk, self.tags[tagk])
+        _repr = _repr[:-2] + ", timestamp: %d, value: %f}" % (self.timestamp, self.value)
+        return _repr
 
     def __str__(self):
         return self.__repr__()
 
+
 class ApptuitException(Exception):
 
     def __init__(self, msg):
+        super(ApptuitException, self).__init__(msg)
         self.msg = msg
 
     def __repr__(self):
@@ -397,16 +588,18 @@ class ApptuitException(Exception):
 
     def __str__(self):
         return self.msg
+
 
 class ApptuitSendException(ApptuitException):
     """
         An exception raised by Apptuit.send()
     """
-    def __init__(self, msg, status_code, success=None, failed=None, errors=None):
+
+    def __init__(self, msg, status_code=None, success=None, failed=None, errors=None):
         super(ApptuitSendException, self).__init__(msg)
         self.msg = msg
         self.status_code = status_code
-        self.errors = errors
+        self.errors = errors or []
         self.success = success
         self.failed = failed
 
@@ -414,14 +607,13 @@ class ApptuitSendException(ApptuitException):
         return self.__str__()
 
     def __str__(self):
-        if self.status_code == 400:
-            msg = str(self.failed) + " errors occurred\n"
-            for error in self.errors:
-                dp = error["datapoint"]
-                error_msg = error["error"]
-                msg += "In the datapoint " + str(dp) + " Error Occurred: " + str(error_msg) + '\n'
-            return msg
-        msg = "Status Code: " + str(self.status_code) + \
-              "; Failed to send " + str(self.failed) + \
-              " datapoints; Error Occured: " + self.errors + "\n"
+        msg = str(self.failed) + " points failed"
+        if self.status_code:
+            msg += " with status: %d\n" % self.status_code
+        else:
+            msg += "\n"
+        for error in self.errors:
+            dp = error["datapoint"]
+            error_msg = error["error"]
+            msg += "%s error occurred in the datapoint %s\n" % (str(error_msg), str(dp))
         return msg

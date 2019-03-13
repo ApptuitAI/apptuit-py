@@ -4,6 +4,9 @@
 [![codecov](https://codecov.io/gh/ApptuitAI/apptuit-py/branch/master/graph/badge.svg)](https://codecov.io/gh/ApptuitAI/apptuit-py)
 [![PyPI](https://img.shields.io/pypi/v/apptuit.svg)](https://pypi.org/project/apptuit/)
 [![Pyversions](https://img.shields.io/pypi/pyversions/apptuit.svg?style=flat)](https://pypi.org/project/apptuit/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+
 
 ## Installation
 
@@ -13,7 +16,10 @@ pip install apptuit --upgrade
 
 ## Dependencies
 
-**Requirements** (installed automatically if you use `pip`): pandas, numpy, requests, pyformance
+**Requirements**
+  - `requests`, `pyformance` - installed automatically if you use `pip` to install apptuit
+  - `pandas` - not installed by default, you should install it manually if you intend to use the `query` API and
+  create dataframes using the `to_df()` method (see [Querying for Data](#querying-for-data))
 
 ## Usage
 
@@ -23,12 +29,15 @@ pip install apptuit --upgrade
    * [Working with Apptuit Pyformance Reporter](#working-with-apptuit-pyformance-reporter)
    * [Configuration](#configuration)
  - [Sending Data](#sending-data)
-   * [Sending Data using ApptuitReporter](#sending-the-data-using-apptuitreporter)
-     * [Getting started with Apptuit pyformance reporter](#getting-started-with-apptuit-pyformance-reporter)
-     * [Error Handling](#error-handling)
-     * [Tags/Metadata](#tagsmetadata)
+   * [Sending data using Apptuit pyformance reporter](#sending-data-using-apptuit-pyformance-reporter)
+     * [Error Handling in ApptuitReporter](#error-handling-in-apptuitreporter)
+     * [Sending Tags/Metadata](#tagsmetadata)
+     * [About Host tag](#about-host-tag)
+     * [Restrictions on Tags](#restrictions-on-tags-and-metric-names)
      * [Meta Metrics](#meta-metrics)
+     * [Python Process Metrics](#python-process-metrics)
  - [Sending Data using `send()` API](#sending-data-using-send-api)
+ - [Sending Data using `send_timeseries()` API](#sending-data-using-send_timeseries-api)
  - [Querying for Data](#querying-for-data)
 
 ### Introduction
@@ -45,10 +54,22 @@ It uses [Pyformance](https://github.com/omergertel/pyformance/) underneath.
 The Apptuit client object can be created as simply as the following line:
 ```python
 from apptuit import Apptuit
-client = Apptuit(token=my_apptuit_token, global_tags={"service": "order-service"})
+client = Apptuit(token=my_apptuit_token, global_tags={"service": "order-service"}, sanitize_mode="prometheus")
 ```
 - `token`: should be your apptuit token
 - `global_tags`: should be the set of default tags you want to apply on all your data. It is an optional parameter
+- `sanitize_mode`: Is a string value which specifies the sanitization mode to be used
+for metric names and tag keys. 
+You can set `sanitize_mode` to three values.
+    - `None`: Disables sanitization.
+    - `apptuit`: Will set the sanitize mode to apptuit, which will replace
+    all the invalid characters with `_`. Valid characters in this mode are all
+    ASCII letters, digits, `/`, `-`, `.`, `_` and Unicode letters.
+    Anyhing else is invalid character.
+    - `prometheus`: Will set the sanitize mode to prometheus, which will replace
+    all the invalid characters with `_`. Valid characters in this mode are ASCII letters, digits
+    and `_`, anything else is considered invalid.
+
 
 Apart from these, the Apptuit constructor takes a couple of more optional parameters explained below:
 
@@ -56,8 +77,9 @@ Apart from these, the Apptuit constructor takes a couple of more optional parame
 - `ignore_environ_tags`: This is False by default. It tells the client whether to look up for
 the global tags in environment variables or not. We will have more to say on this in the configuration section.
 
-The client provides two methods `query` and `send` which are described in the
-"Querying for Data" and "Sending data using send()" sections respectively
+The client provides two methods, `query` and `send`, which are described in the
+[Querying for Data](#querying-for-data) and
+[Sending data using send()](#sending-data-using-send-api) sections respectively.
 
 #### Working with Apptuit Pyformance Reporter
 The apptuit pyformance reporter is an abstraction based on Code Hale's metrics. It provides
@@ -70,41 +92,50 @@ from pyformance import MetricsRegistry
 
 reporter_tags = {"service": "order-service"}
 registry = MetricsRegistry()
-reporter = ApptuitReporter(token=my_apptuit_token,
+reporter = ApptuitReporter(token="my_apptuit_token",
                            registry=registry,
                            reporting_interval=60,
-                           tags=reporter_tags)
+                           tags=reporter_tags,
+                           collect_process_metrics=True,
+                           sanitize_mode="prometheus")
 
 ```
 Here:
-`token`: Is your Apptuit token
-`registry`: Is an instance of MetricsRegistry (explained more in Reporter section)
-`reporting_interval`: Number of seconds to wait before reporing again
-`tags`: Tags - these tags apply to all the metrics reported through this reporter.
+- `token`: Is your Apptuit token
+- `registry`: Is an instance of MetricsRegistry (explained more in Reporter section)
+- `reporting_interval`: Number of seconds to wait before reporing again
+- `tags`: These tags apply to all the metrics reported through this reporter.
+- `collect_process_metrics`: Is a boolean value which will enable or disable collection 
+of various process metrics like (Resource, GC, and Thread). If it is `True` then process 
+metrics will be collected. various process metrics are [here](#python-process-metrics).
+- `sanitize_mode`: This is same as the `sanitize_mode` parameter for the
+client (see above in client usage example).
+
 
 #### Configuration
 As we saw above, we need to pass the token and global tags as parameter to the 
-Apptuit client when instantiating it. There is an alternative to set these as
-environment variables, in which case you don't need to pass them explicitly in your code.
-These variables are described below
+Apptuit client when instantiating it. Alternatively you can set these as
+environment variables, so that you don't need to hard-code them in your code.
+These environment variables are described below.
 
-* `APPTUIT_PY_TOKEN`: If the Apptuit client and the ApptuitReporter are not passed a token parameter they look for the token in this variable.
-* `APPTUIT_PY_TAGS`: This is an alternative for the `global_tags` parameter for the Apptuit client. If the Apptuit client does not receive a value for `global_tags` parameter it checks this environment variable. Both the `global_tags` parameter
-and `APPTUIT_PY_TAGS` environment variable are strictly optional. If present the Apptuit client adds those tags to every
+* `APPTUIT_API_TOKEN`: If the Apptuit client and the ApptuitReporter are not passed a token parameter they look for the token in this variable. If this variable is also not set, the client will raise
+`ApptuitException` to indicate about the missing token
+* `APPTUIT_TAGS`: This is an alternative for the `global_tags` parameter for the Apptuit client. If the Apptuit client does not receive a value for `global_tags` parameter it checks this environment variable. Both the `global_tags` parameter
+and `APPTUIT_TAGS` environment variable are strictly optional. If present, the Apptuit client adds those tags to every
 point it is sending.
 
 The format of the value of this variable is as follows:
 
 ```sh
-export APPTUIT_PY_TAGS="tag_key1: tag_val1, tag_key2: tag_val2, tag_key3: tag_val3"
+export APPTUIT_TAGS="tag_key1: tag_val1, tag_key2: tag_val2, tag_key3: tag_val3"
 ```
 The spaces after the comma and colon are optional.
 
-The `APPTUIT_PY_TAGS` variable is also read by the `ApptuitReporter`, which combines them with its reporter tags.
+The `APPTUIT_TAGS` variable is also read by the `ApptuitReporter`, which combines them with its reporter tags.
 In case of a conflict of same tag keys in both sets of tags, the reporter tag take preference.
 
-**Note**: Support for these variable has been added in the development version of apptuit-py and is not available
-in any of the released versions.
+**Note**: Support for these variable was added in the version `1.0.0` of apptuit-py and is not available
+in any of the earlier released versions.
 
 ### Sending data
 
@@ -112,13 +143,7 @@ There are two ways of sending the data to Apptuit. First is to use the `ApptuitR
 the second options is to use the `send()` method of the Apptuit client.
 We will show how to use both of the options below.
 
-#### Sending the data using ApptuitReporter
-
-You can use apptuit's pyformance reporter to report the data.
-`ApptuitReporter`. [Pyformance](https://github.com/omergertel/pyformance/) is a Python implementation of
-Coda Hale's Yammer metrics. 
-
-#### Getting started with Apptuit pyformance reporter
+### Sending data using Apptuit pyformance reporter
 
 ```python
 import socket
@@ -272,26 +297,36 @@ def handle_request(request):
     response_sizes.add(response.size())
 
 ```
-#### Error Handling
-While sending data from ApptuitReporter some datapoints might have errors or server errors might occur, you can 
-use the parameter error_handler to work on those errors. You cant pass any parameters to that error handler but 
-can use the python feature like closure or use partial from functools package. There is a default error handler 
-which will write the errors to stderr. If you dont want any error handling you can pass `error_handler=None` which 
-will disable default error handler.
+#### Error Handling in ApptuitReporter
+The ApptuitReporter sends data asynchronously (unless you are explicitly using it in synchronous mode). In asynchronous
+mode it is very difficult to know if the reporter is working properly or not. To make this easier the
+`ApptuitReporter` takes an `error_handler` argument. `error_handler` is expected to be a function reference
+which takes 4 arguments. The signature of the function and the arguments are explained below:
+
 ```python
-from apptuit.pyformance import ApptuitReporter
-from pyformance import MetricsRegistry
+  def error_handler(status_code, successful_points_count, failed_points_count, errors):
+    pass
+```
+- `status_code`: The HTTP status code of the POST API call to Apptuit
+- `successful_points_count`: Number of points successfully processed
+- `failed_points_count`: Number of points which could not be processed due to errors
+- `errors`: List of error messages describing the reason of failure of each of the failed points
+
+By default, the `ApptuitReporter` registers a `default_error_handler`, which writes the errors to `stderr`.
+To override that you can pass your own error handler implementation, or if you don't wish to do anything for errors
+you can pass `None` for the `error_handler` argument.
+
+**Reporter with default error handler**
+```python
 import logging
-reporter_tags = {"service": "order-service"}
-registry = MetricsRegistry()
-my_apptuit_token = "token"
 #reporter with default error handler (writes to stderr)
 reporter = ApptuitReporter(token=my_apptuit_token,
                            registry=registry,
                            reporting_interval=60,
                            tags=reporter_tags)
-
-#reporter without error handler
+```
+**Reporter with No error handler**
+```python
 reporter_with_no_error_handler = ApptuitReporter(
                             token=my_apptuit_token,
                             registry=registry,
@@ -299,26 +334,33 @@ reporter_with_no_error_handler = ApptuitReporter(
                             tags=reporter_tags,
                             error_handler=None
                             )
+```
 
-#reporter with custom error_handler using partial
-def custom_error_handler_partial(logger, status_code, successful, failed, errors):
-    logger.error(str(ApptuitSendException(
-        status_code, successful, failed, errors
-    )))
+The error handler function by definition takes only four arguments.
+If you wish to pass extra arguments to the error handler you can use
+closures or partial functions to get around the limitation.
+
+**Passing extra argument using Partial**
+
+```python
+import logging
 from functools import partial
+
+def custom_error_handler(logger, status_code, successful, failed, errors):
+    logger.error("ApptuitReporter failed to send %d points, due to errors: %s" % (failed, str(errors)))
+
 logger = logging.getLogger("logger key")
-apptuit_custom_error_handler = partial(custom_error_handler_partial,logger)
-
-reporter_with_no_error_handler = ApptuitReporter(
-                            token=my_apptuit_token,
-                            registry=registry,
-                            reporting_interval=60,
-                            tags=reporter_tags,
-                            error_handler=apptuit_custom_error_handler
-                            )
-
-
-#reporter with custom error_handler using closure
+apptuit_custom_error_handler = partial(custom_error_handler, logger)
+reporter = ApptuitReporter(
+            token=my_apptuit_token,
+            registry=registry,
+            reporting_interval=60,
+            tags=reporter_tags,
+            error_handler=apptuit_custom_error_handler
+            )
+```
+**Passing extra argument using closure**
+```python
 ...
 import logging
 from apptuit import ApptuitSendException
@@ -333,18 +375,15 @@ class OrderService:
 
     def init_reporter(self, token, registry):
         ...
-        def custom_error_handler_closure(status_code, successful, failed, errors):
+        def apptuit_error_handler(status_code, successful, failed, errors):
             logger = self.logger
             logger.error(str(ApptuitSendException(
                 status_code, successful, failed, errors
             )))
             
         self.reporter = ApptuitReporter(...,
-                                    error_handler=custom_error_handler_closure)
-        # reporter.start() will start reporting the data asynchronously based on the reporting_interval set.
-        self.reporter.start()
+                                    error_handler=apptuit_error_handler)
         ...
-
 
 ```
 
@@ -431,23 +470,57 @@ is a local cache of counters keyed by the encoded metric names. This avoids the 
 of encoding the metric name and tags every time, if we already have created a counter for that city.
 It also ensures that we will report separate time-series for order-counts of different city codes.
 
-#### Meta Metrics
-Reporter also sends a few metrics such as total data points sent, number of successful data points, 
-number of failed data points, and time for sending data points. These will be send along with the metrics
+#### About Host Tag
+The reporter will add a `host` tag key with host name as its value (obtained by calling `socket.gethostname()`).
+This is helpful in order to group the metrics by host if the reporter is being run on multiple servers. The value
+of the `host` tag key can be overridden by passing your own `host` tag in the `tags` parameter to the reporter or
+by setting a `host` tag in the global environment variable for tags
 
-```python
-NUMBER_OF_TOTAL_POINTS = "apptuit.reporter.send.total"
-NUMBER_OF_SUCCESSFUL_POINTS = "apptuit.reporter.send.successful"
-NUMBER_OF_FAILED_POINTS = "apptuit.reporter.send.failed"
-API_CALL_TIMER = "apptuit.reporter.send.time"
-```
+If you don't wish for the `host` tag to be set by default you can disable it by setting the
+`disable_host_tag` parameter of the reporter to `True`. Alternatively you can set the environment
+variable `APPTUIT_DISABLE_HOST_TAG` to `True` to disable it.
+
+#### Restrictions on Tags and Metric names
+- **Allowed characters in tag keys and metric names** - Tag keys and metric names can have any unicode letters (as defined by unicode specification) and the following special characters:  `.`, `-`, `_`, `/`. However, if you are looking to follow Prometheus compliant naming ([see specification])(https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels) you should restrict them to ASCII letters, digits and  underscores only and it must match the regex `[a-zA-Z_][a-zA-Z0-9_]*`. No such restriction is applicable on tag values.
+- **Maximum number of tags** - Apptuit currently allows upto 25 tag key-value pairs per datapoint
+
+#### Meta Metrics
+The `ApptuitReporter` also reports a set of meta metrics which can be a useful indicator if the reporter is 
+working as expected or not, as well as to get a sense of how many points are being sent and the latency of
+the Apptuit API. These meta metrics are described below.
+
+- `apptuit.reporter.send.total` - Total number of points sent
+- `apptuit.reporter.send.successful` - Number of points which were succssfully processed
+- `apptuit.reporter.send.failed` - Number of points which failed
+- `apptuit.reporter.send.time` - Timing stats of of the send API
+
+#### Python Process Metrics
+The `ApptutiReporter` can also be configured to report various metrics of
+the Python process it is running in. By default it is disabled but you can enable it by
+passing setting the parameter `collect_process_metrics` to `True` when creating the
+reporter object. The reporter will collect metrics related to the system resource usage
+by the process (cpu, memory, IPC etc.) as well as metrics related to garbage collection
+and threads. The complete list of all the metrics collected is provided below:
+- `python.cpu.time.used.seconds` - Total time spent by the process in user mode and system mode.
+- `python.memory.usage.bytes` - Total amount of memory used by the process.
+- `python.page.faults` - Total number of page faults received by the process.
+- *`python.process.swaps` - Total number of times the process was swapped-out of the main memory.
+- `python.block.operations` - Total number of block input and output operations.
+- `python.ipc.messages` - Total number of inter-process messages sent and received by the process. 
+- *`python.system.signals` - Total number of signals received by the process.
+- `python.context.switches` - Total number of context switches of the process.
+- `python.thread` - Count of active, demon and dummy threads.
+- `python.gc.collection` - Count of objects collected in gc for each generation. 
+- `python.gc.threshold` - Value of garbage collector threshold for each generation.
+
+**Note** - Metrics marked with `*` are zero on Linux because it does not support them
 
 #### Global tags, reporter tags and metric tags
 
 When using the reporter we have three sets of tags, it's better to clarify a few things about them.
 
 - `ApptuitReporter` takes a set of tags as parameter. It adds these tags to all the metrics it is reporting.
-- If the environment variable `APPTUIT_PY_TAGS` is set, the reporter takes those into account as well, however
+- If the environment variable `APPTUIT_TAGS` is set, the reporter takes those into account as well, however
 the tags passed to it take preference in case of a conflict because of common tag keys.
 - Each metric being reported by the reporter might also have some tags attached, in case of a conflict
 because of common tag keys, the metric tags take preference over reporter or global tags.
@@ -480,6 +553,43 @@ while True:
     time.sleep(60)
 ```
 
+#### Sending data using send_timeseries() API
+The `send` API works with a list of DataPoint objects. Creating each DataPoint object involves validating the metric name and
+the tags. If you are creating thousands of DataPoint objects with the metric name and tags, it can quickly get very expensive.
+In order to avoid that overhead, there is an alternative `send_timeseries` API as well, which accepts a list of `TimeSeries`
+objects. This is much more convenient as you need to create a `TimeSeries` object with a metric name and tags. Thereafter
+you can add points to that timeseries object by calling its `add_point()` method. This avoids creation of DataPoint objects
+and the overhead of the tag validation.
+
+Following is an example from a scraper we run internally. We call an HTTP API, get a JSON response and send it to us in the
+form of timeseries. In order to avoid too many API calls to Apptuit we call `send_timeseries` whenever we have accumulated
+50000 or more points. Once we make a `send_timeseries` call we reset the `series_list` object to contain just the latest
+`TimeSeries` object (all the earlier series would have been sent to Apptuit).
+
+```python
+from apptuit import Apptuit, TimeSeries
+
+series_list = []
+points_count = 0
+token = "mytoken"
+client = Apptuit(token=token)
+response_data = make_request()
+for result in response_data["results"]:
+    metric_name = result["metric"]
+    tags = result["tags"]
+    series = TimeSeries(metric_name, tags)
+    series_list.append(series)
+    for timestamp, value in result["values"]:
+        series.add_point(timestamp, value)
+        points_count += 1
+        if points_count >= 50000:
+            client.send_timeseries(series_list)
+            points_count = 0
+            series_list = [TimeSeries(metric_name, tags)]
+if points_count > 0:
+    client.send_timeseries(series_list)
+```
+
 ### Querying for data
 
 ```python
@@ -494,5 +604,7 @@ query_res = apptuit.query("fetch('proc.cpu.percent').downsample('1m', 'avg')", s
 df = query_res[0].to_df()
 # Another way of creating the DF is accessing by the metric name in the query
 another_df = query_res['proc.cpu.percent'].to_df()
-
 ```
+It should be noted that using the `to_df()` method requires that you have `pandas` installed.
+We don't install `pandas` by default as part of the requirements because not every user of the library
+would want to query or create dataframes (many users just use the `send` API or the reporter functionality)
