@@ -20,6 +20,7 @@ Apptuit Pyformance Reporter
 import os
 import socket
 import sys
+import time
 
 from pyformance import MetricsRegistry
 from pyformance.reporters.reporter import Reporter
@@ -217,3 +218,14 @@ class ApptuitReporter(Reporter):
                     tags=tags, timestamp=timestamp, value=metrics[key][value_key])
                 dps.append(data_point)
         return dps
+
+    def _loop(self):
+        while not self._stopped.is_set():
+            start = time.time()
+            try:
+                self.report_now(self.registry)
+            except Exception:
+                pass
+            end = time.time()
+            wait_time = max(0, self.reporting_interval-(end-start))
+            time.sleep(wait_time)
