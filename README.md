@@ -54,19 +54,21 @@ It uses [Pyformance](https://github.com/omergertel/pyformance/) underneath.
 The Apptuit client object can be created as simply as the following line:
 ```python
 from apptuit import Apptuit
-client = Apptuit(token=my_apptuit_token, global_tags={"service": "order-service"}, sanitize_mode="prometheus")
+client = Apptuit(token=my_apptuit_token,
+                 global_tags={"service": "order-service"},
+                 sanitize_mode="prometheus")
 ```
 - `token`: should be your apptuit token
 - `global_tags`: should be the set of default tags you want to apply on all your data. It is an optional parameter
 - `sanitize_mode`: Is a string value which specifies the sanitization mode to be used
 for metric names and tag keys. 
-You can set `sanitize_mode` to three values.
-    - `None`: Disables sanitization.
-    - `apptuit`: Will set the sanitize mode to apptuit, which will replace
+You can set `sanitize_mode` to three values:
+    - `None`: disables sanitization.
+    - `apptuit`: set the sanitize mode to apptuit, which will replace
     all the invalid characters with `_`. Valid characters in this mode are all
     ASCII letters, digits, `/`, `-`, `.`, `_` and Unicode letters.
     Anyhing else is invalid character.
-    - `prometheus`: Will set the sanitize mode to prometheus, which will replace
+    - `prometheus`: set the sanitize mode to prometheus, which will replace
     all the invalid characters with `_`. Valid characters in this mode are ASCII letters, digits
     and `_`, anything else is considered invalid.
 
@@ -75,7 +77,8 @@ Apart from these, the Apptuit constructor takes a couple of more optional parame
 
 - `api_endpoint`: This should be the http endpoint for calling Apptuit apis. Normally you don't need to specify this and the default value is set to `https://api.apptuit.ai`.
 - `ignore_environ_tags`: This is False by default. It tells the client whether to look up for
-the global tags in environment variables or not. We will have more to say on this in the configuration section.
+the global tags in environment variables or not. Global tags are tags which are applied to all the
+datapoints sent through the client. We will have more to say on this in the configuration section.
 
 The client provides two methods, `query` and `send`, which are described in the
 [Querying for Data](#querying-for-data) and
@@ -83,9 +86,10 @@ The client provides two methods, `query` and `send`, which are described in the
 
 #### Working with Apptuit Pyformance Reporter
 The apptuit pyformance reporter is an abstraction based on Code Hale's metrics. It provides
-high level abstractions to accumulate data in the form of metrics such as `meter`, `timer`,
-`gauge` etc. and send to Apptuit. These things are described in more detail in the reporter section,
-here we will see how to create a reporter and various parameter it supports.
+high level primitives to accumulate data in the form of metrics such as `meter`, `timer`,
+`gauge` etc. and send to Apptuit. These things are described in more
+detail in the [reporter section](#sending-data-using-apptuit-pyformance-reporter),
+here we will see how to create a reporter and various parameters it supports.
 ```python
 from apptuit.pyformance import ApptuitReporter
 from pyformance import MetricsRegistry
@@ -102,20 +106,22 @@ reporter = ApptuitReporter(token="my_apptuit_token",
 ```
 Here:
 - `token`: Is your Apptuit token
-- `registry`: Is an instance of MetricsRegistry (explained more in Reporter section)
+- `registry`: Is an instance of MetricsRegistry (explained more in
+[reporter section](#sending-data-using-apptuit-pyformance-reporter))
 - `reporting_interval`: Number of seconds to wait before reporing again
-- `tags`: These tags apply to all the metrics reported through this reporter.
+- `tags`: A dictionary of tag keys and values.
+These tags apply to all the metrics reported through this reporter.
 - `collect_process_metrics`: Is a boolean value which will enable or disable collection 
-of various process metrics like (Resource, GC, and Thread). If it is `True` then process 
-metrics will be collected. various process metrics are [here](#python-process-metrics).
+of various metrics related to the Python process (CPU, memory, GC, and threads). By default
+it is disabled, set this parameter to `True` to enable it.
 - `sanitize_mode`: This is same as the `sanitize_mode` parameter for the
 client (see above in client usage example).
 
 
 #### Configuration
 As we saw above, we need to pass the token and global tags as parameter to the 
-Apptuit client when instantiating it. Alternatively you can set these as
-environment variables, so that you don't need to hard-code them in your code.
+Apptuit client when instantiating it. Alternatively we can set these as
+environment variables, so that we don't need to hard-code them in our code.
 These environment variables are described below.
 
 * `APPTUIT_API_TOKEN`: If the Apptuit client and the ApptuitReporter are not passed a token parameter they look for the token in this variable. If this variable is also not set, the client will raise
@@ -187,7 +193,7 @@ counter with that name.
 
 **MetricsRegistry**
 
-MetricsRegistry is the container for all the metrics in your application. You can use it to register and create
+MetricsRegistry is the container for all the metrics in our application. We can use it to register and create
 various kinds of metrics (meter, gauge, counter etc.). For example:
 
 ```python
@@ -298,7 +304,8 @@ def handle_request(request):
 
 ```
 #### Error Handling in ApptuitReporter
-The ApptuitReporter sends data asynchronously (unless you are explicitly using it in synchronous mode). In asynchronous
+The ApptuitReporter sends data asynchronously (unless we are explicitly using it in synchronous mode
+by not calling the `start()` method). In asynchronous
 mode it is very difficult to know if the reporter is working properly or not. To make this easier the
 `ApptuitReporter` takes an `error_handler` argument. `error_handler` is expected to be a function reference
 which takes 4 arguments. The signature of the function and the arguments are explained below:
@@ -416,7 +423,7 @@ encoded_metric = timeseries.encode_metric("node.cpu", {"type": "idle"})
 metric_name, tags = timeseries.decode_metric(encoded_metric)
 ```
 
-A *good practise* is to maintain a local cache of the created metrics and reuse them, rather than
+A *recommended practise* is to maintain a local cache of the created metrics and reuse them, rather than
 creating them every time:
 
 ```python
@@ -473,15 +480,20 @@ It also ensures that we will report separate time-series for order-counts of dif
 #### About Host Tag
 The reporter will add a `host` tag key with host name as its value (obtained by calling `socket.gethostname()`).
 This is helpful in order to group the metrics by host if the reporter is being run on multiple servers. The value
-of the `host` tag key can be overridden by passing your own `host` tag in the `tags` parameter to the reporter or
+of the `host` tag key can be overridden by passing our own `host` tag in the `tags` parameter to the reporter or
 by setting a `host` tag in the global environment variable for tags
 
-If you don't wish for the `host` tag to be set by default you can disable it by setting the
-`disable_host_tag` parameter of the reporter to `True`. Alternatively you can set the environment
+If we don't wish for the `host` tag to be set by default we can disable it by setting the
+`disable_host_tag` parameter of the reporter to `True`. Alternatively we can set the environment
 variable `APPTUIT_DISABLE_HOST_TAG` to `True` to disable it.
 
 #### Restrictions on Tags and Metric names
-- **Allowed characters in tag keys and metric names** - Tag keys and metric names can have any unicode letters (as defined by unicode specification) and the following special characters:  `.`, `-`, `_`, `/`. However, if you are looking to follow Prometheus compliant naming ([see specification])(https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels) you should restrict them to ASCII letters, digits and  underscores only and it must match the regex `[a-zA-Z_][a-zA-Z0-9_]*`. No such restriction is applicable on tag values.
+- **Allowed characters in tag keys and metric names** - Tag keys and metric names can have any unicode 
+etters (as defined by unicode specification) and the following special characters:  `.`, `-`, `_`, `/`.
+However, if we are looking to follow Prometheus compliant naming
+([see specification])(https://prometheus.io/docs/concepts/data_model/#metric-names-and-labels)
+we should restrict them to ASCII letters, digits and  underscores only and it must match the
+regex `[a-zA-Z_][a-zA-Z0-9_]*`. No such restriction is applicable on tag values.
 - **Maximum number of tags** - Apptuit currently allows upto 25 tag key-value pairs per datapoint
 
 #### Meta Metrics
@@ -489,29 +501,29 @@ The `ApptuitReporter` also reports a set of meta metrics which can be a useful i
 working as expected or not, as well as to get a sense of how many points are being sent and the latency of
 the Apptuit API. These meta metrics are described below.
 
-- `apptuit.reporter.send.total` - Total number of points sent
-- `apptuit.reporter.send.successful` - Number of points which were succssfully processed
-- `apptuit.reporter.send.failed` - Number of points which failed
-- `apptuit.reporter.send.time` - Timing stats of of the send API
+- `apptuit_reporter_send_total` - Total number of points sent
+- `apptuit_reporter_send_successful` - Number of points which were succssfully processed
+- `apptuit_reporter_send_failed` - Number of points which failed
+- `apptuit_reporter_send_time` - Timing stats of of the send API
 
 #### Python Process Metrics
 The `ApptutiReporter` can also be configured to report various metrics of
-the Python process it is running in. By default it is disabled but you can enable it by
+the Python process it is running in. By default it is disabled but we can enable it by
 passing setting the parameter `collect_process_metrics` to `True` when creating the
 reporter object. The reporter will collect metrics related to the system resource usage
 by the process (cpu, memory, IPC etc.) as well as metrics related to garbage collection
 and threads. The complete list of all the metrics collected is provided below:
-- `python.cpu.time.used.seconds` - Total time spent by the process in user mode and system mode.
-- `python.memory.usage.bytes` - Total amount of memory used by the process.
-- `python.page.faults` - Total number of page faults received by the process.
-- *`python.process.swaps` - Total number of times the process was swapped-out of the main memory.
-- `python.block.operations` - Total number of block input and output operations.
-- `python.ipc.messages` - Total number of inter-process messages sent and received by the process. 
-- *`python.system.signals` - Total number of signals received by the process.
-- `python.context.switches` - Total number of context switches of the process.
-- `python.thread` - Count of active, demon and dummy threads.
-- `python.gc.collection` - Count of objects collected in gc for each generation. 
-- `python.gc.threshold` - Value of garbage collector threshold for each generation.
+- `python_cpu_time_used_seconds` - Total time spent by the process in user mode and system mode.
+- `python_memory_usage_bytes` - Total amount of memory used by the process.
+- `python_page_faults` - Total number of page faults received by the process.
+- *`python_process_swaps` - Total number of times the process was swapped-out of the main memory.
+- `python_block_operations` - Total number of block input and output operations.
+- `python_ipc_messages` - Total number of inter-process messages sent and received by the process. 
+- *`python_system_signals` - Total number of signals received by the process.
+- `python_context_switches` - Total number of context switches of the process.
+- `python_thread` - Count of active, demon and dummy threads.
+- `python_gc_collection` - Count of objects collected in gc for each generation. 
+- `python_gc_threshold` - Value of garbage collector threshold for each generation.
 
 **Note** - Metrics marked with `*` are zero on Linux because it does not support them
 
@@ -555,10 +567,10 @@ while True:
 
 #### Sending data using send_timeseries() API
 The `send` API works with a list of DataPoint objects. Creating each DataPoint object involves validating the metric name and
-the tags. If you are creating thousands of DataPoint objects with the metric name and tags, it can quickly get very expensive.
+the tags. If we are creating thousands of DataPoint objects with the metric name and tags, it can quickly get very expensive.
 In order to avoid that overhead, there is an alternative `send_timeseries` API as well, which accepts a list of `TimeSeries`
-objects. This is much more convenient as you need to create a `TimeSeries` object with a metric name and tags. Thereafter
-you can add points to that timeseries object by calling its `add_point()` method. This avoids creation of DataPoint objects
+objects. This is much more convenient as we need to create a `TimeSeries` object with a metric name and tags. Thereafter
+we can add points to that timeseries object by calling its `add_point()` method. This avoids creation of DataPoint objects
 and the overhead of the tag validation.
 
 Following is an example from a scraper we run internally. We call an HTTP API, get a JSON response and send it to us in the
