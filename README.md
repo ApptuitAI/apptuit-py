@@ -46,7 +46,7 @@ There are two main components
 - The Apptuit client - provides core functionality to query and send data
 - Apptuit pyformance reporter - provides a high level abstraction on top of the client
 to make it easy for you to report metrics from your applications to Apptuit.
-It is based on Coda Hale's metrics design and implemented using and provides primitives like
+It is based on Coda Hale's metrics design and provides primitives like
 `meter`, `gauge`, `counter` to accumulate and report data.
 It uses [Pyformance](https://github.com/omergertel/pyformance/) underneath.
 
