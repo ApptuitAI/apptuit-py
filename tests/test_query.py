@@ -102,7 +102,7 @@ def test_df_shape(mock_get):
     """
     resp = do_query(mock_get)
     df = resp[0].to_df()
-    assert_equals(df.shape, (432, 1))
+    assert_equals(df.shape, (433, 1))
 
 
 @patch('apptuit.apptuit_client.requests.get')
