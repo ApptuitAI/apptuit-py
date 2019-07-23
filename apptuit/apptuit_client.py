@@ -81,7 +81,7 @@ def _parse_response(resp, start, end=None):
             for point in dps:
                 if point[0] < start:
                     continue
-                if end is not None and point[0] >= end:
+                if end is not None and point[0] > end:
                     continue
                 index.append(point[0])
                 values.append(point[1])
