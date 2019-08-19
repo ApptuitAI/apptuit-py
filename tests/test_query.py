@@ -20,6 +20,8 @@ Tests for the query API
 
 import sys
 
+from requests import Response
+
 try:
     from unittest.mock import Mock, patch
 except ImportError:
@@ -102,7 +104,7 @@ def test_df_shape(mock_get):
     """
     resp = do_query(mock_get)
     df = resp[0].to_df()
-    assert_equals(df.shape, (432, 1))
+    assert_equals(df.shape, (433, 1))
 
 
 @patch('apptuit.apptuit_client.requests.get')
@@ -122,6 +124,7 @@ def test_data(mock_get):
     expected_df = pd.read_csv('tests/nyc.taxi.rides.csv', index_col=0, header=0, parse_dates=True)
     resp = do_query(mock_get)
     df = resp[0].to_df()
+    print(df)
     assert_true(df.equals(expected_df))
 
 
@@ -158,13 +161,15 @@ def test_multiple_retries(mock_get):
 
 
 @patch('apptuit.apptuit_client.requests.get')
-def test_get_error(mock_get):
+def test_get_error_with_no_retry(mock_get):
     """
     Test that when the retry_count is 0 for the query API we get an exception
     """
     mock_get.return_value.content = get_mock_response()
     mock_get.return_value.status_code = 504
-    mock_get.return_value.raise_for_status.side_effect = requests.exceptions.HTTPError
+    err_response = Response()
+    err_response.status_code = 504
+    mock_get.return_value.raise_for_status.side_effect = requests.exceptions.HTTPError(response=err_response)
     token = 'sdksdk203afdsfj_sadasd3939'
     client = Apptuit(sanitize_mode=None, token=token)
     query = "fetch('nyc.taxi.rides')"
@@ -172,6 +177,46 @@ def test_get_error(mock_get):
     end = 1407609000
     with assert_raises(ApptuitException):
         client.query(query, start, end, retry_count=0)
+    assert_equals(1, mock_get.call_count)
+
+@patch('apptuit.apptuit_client.requests.get')
+def test_get_error_with_retry(mock_get):
+    """
+    Test that when the retry_count is 0 for the query API we get an exception
+    """
+    mock_get.return_value.content = get_mock_response()
+    mock_get.return_value.status_code = 504
+    err_response = Response()
+    err_response.status_code = 504
+    mock_get.return_value.raise_for_status.side_effect = requests.exceptions.HTTPError(response=err_response)
+    token = 'sdksdk203afdsfj_sadasd3939'
+    client = Apptuit(sanitize_mode=None, token=token)
+    query = "fetch('nyc.taxi.rides')"
+    start = 1406831400
+    end = 1407609000
+    with assert_raises(ApptuitException):
+        client.query(query, start, end, retry_count=1)
+    assert_equals(2, mock_get.call_count)
+
+
+@patch('apptuit.apptuit_client.requests.get')
+def test_get_error_retry_with_404(mock_get):
+    """
+    Test that when the retry_count is 0 for the query API we get an exception
+    """
+    mock_get.return_value.content = get_mock_response()
+    mock_get.return_value.status_code = 404
+    err_response = Response()
+    err_response.status_code = 404
+    mock_get.return_value.raise_for_status.side_effect = requests.exceptions.HTTPError(response=err_response)
+    token = 'sdksdk203afdsfj_sadasd3939'
+    client = Apptuit(sanitize_mode=None, token=token)
+    query = "fetch('nyc.taxi.rides')"
+    start = 1406831400
+    end = 1407609000
+    with assert_raises(ApptuitException):
+        client.query(query, start, end, retry_count=2)
+    assert_equals(1, mock_get.call_count)
 
 
 @patch('apptuit.apptuit_client.requests.get')

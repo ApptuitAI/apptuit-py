@@ -19,6 +19,7 @@ Client module for Apptuit APIs
 """
 import json
 import os
+import random
 import sys
 import time
 import warnings
@@ -46,7 +47,7 @@ SANITIZERS = {
     "apptuit": sanitize_name_apptuit,
     "prometheus": sanitize_name_prometheus
 }
-
+BASE_SLEEP_TIME_SECS = 2
 
 def _get_user_agent():
     py_version = sys.version.split()[0]
@@ -223,18 +224,36 @@ class Apptuit(object):
                 points_count += 1
         return data, points_count
 
-    def send(self, datapoints, timeout=60):
+    def send(self, datapoints, timeout=60, retry_count=0):
         """
         Send the given set of datapoints to Apptuit
         Params:
             datapoints: A list of DataPoint objects
             timeout: Timeout (in seconds) for the HTTP request
+            retry_count: Number of time it has to try, in case of an exception
         It raises an ApptuitSendException in case the backend API responds with an error
         """
         if not datapoints:
             return
         payload = self._create_payload_from_datapoints(datapoints)
-        self.__send(payload, len(datapoints), timeout)
+        try_number = 0
+        while True:
+            try:
+                try_number += 1
+                self.__send(payload, len(datapoints), timeout)
+                return
+            except ApptuitSendException as e:
+                if retry_count < try_number:
+                    raise e
+                if 500 <= e.status_code <= 599:
+                    self.backoff_with_jitter(try_number)
+                    continue
+                raise e
+
+    @staticmethod
+    def backoff_with_jitter(try_number):
+        sleep_time = int(random.randrange(0, min(30, BASE_SLEEP_TIME_SECS * (2 ** try_number))))
+        time.sleep(sleep_time)
 
     def send_timeseries(self, timeseries_list, timeout=60):
         """
@@ -311,14 +330,23 @@ class Apptuit(object):
             cpu_df = res[0].to_df()
             load_df = res[1].to_df()
         """
-        try:
-            url = self.__generate_request_url(query_str, start, end)
-            return self._execute_query(url, start, end, timeout)
-        except (requests.exceptions.HTTPError, requests.exceptions.SSLError) as e:
-            if retry_count > 0:
-                time.sleep(1)
-                return self.query(query_str, start, end, retry_count=retry_count - 1)
-            else:
+        url = self.__generate_request_url(query_str, start, end)
+        try_number = 0
+        while True:
+            try:
+                try_number += 1
+                return self._execute_query(url, start, end, timeout)
+            except requests.exceptions.HTTPError as e:
+                if retry_count < try_number:
+                    raise ApptuitException("Failed to get response from Apptuit"
+                                       "query service due to exception: %s" % str(e))
+                if e.response is not None:
+                    if 500 <= e.response.status_code <= 599:
+                        self.backoff_with_jitter(try_number)
+                        continue
+                raise ApptuitException("Failed to get response from Apptuit"
+                                       "query service due to exception: %s" % str(e))
+            except requests.exceptions.SSLError as e:
                 raise ApptuitException("Failed to get response from Apptuit"
                                        "query service due to exception: %s" % str(e))
 
