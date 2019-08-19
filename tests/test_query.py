@@ -124,7 +124,6 @@ def test_data(mock_get):
     expected_df = pd.read_csv('tests/nyc.taxi.rides.csv', index_col=0, header=0, parse_dates=True)
     resp = do_query(mock_get)
     df = resp[0].to_df()
-    print(df)
     assert_true(df.equals(expected_df))
 
 
