@@ -243,11 +243,10 @@ class Apptuit(object):
                 self.__send(payload, len(datapoints), timeout)
                 return
             except ApptuitSendException as apptuit_exception:
-                if retry_count < try_number:
-                    raise apptuit_exception
-                if 500 <= apptuit_exception.status_code <= 599:
-                    self.backoff_with_jitter(try_number)
-                    continue
+                if retry_count >= try_number:
+                    if 500 <= apptuit_exception.status_code <= 599:
+                        self.backoff_with_jitter(try_number)
+                        continue
                 raise apptuit_exception
 
     @staticmethod
