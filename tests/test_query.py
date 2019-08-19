@@ -218,6 +218,25 @@ def test_get_error_retry_with_404(mock_get):
         client.query(query, start, end, retry_count=2)
     assert_equals(1, mock_get.call_count)
 
+@patch('apptuit.apptuit_client.requests.get')
+def test_get_error_retry_with_SSLError(mock_get):
+    """
+    Test that when the retry_count is 0 for the query API we get an exception
+    """
+    mock_get.return_value.content = get_mock_response()
+    mock_get.return_value.status_code = 404
+    err_response = Response()
+    err_response.status_code = 505
+    mock_get.return_value.raise_for_status.side_effect = requests.exceptions.SSLError(response=err_response)
+    token = 'sdksdk203afdsfj_sadasd3939'
+    client = Apptuit(sanitize_mode=None, token=token)
+    query = "fetch('nyc.taxi.rides')"
+    start = 1406831400
+    end = 1407609000
+    with assert_raises(ApptuitException):
+        client.query(query, start, end, retry_count=2)
+    assert_equals(1, mock_get.call_count)
+
 
 @patch('apptuit.apptuit_client.requests.get')
 def test_empty_dps(mock_get):

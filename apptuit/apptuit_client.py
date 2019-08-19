@@ -242,16 +242,21 @@ class Apptuit(object):
                 try_number += 1
                 self.__send(payload, len(datapoints), timeout)
                 return
-            except ApptuitSendException as e:
+            except ApptuitSendException as apptuit_exception:
                 if retry_count < try_number:
-                    raise e
-                if 500 <= e.status_code <= 599:
+                    raise apptuit_exception
+                if 500 <= apptuit_exception.status_code <= 599:
                     self.backoff_with_jitter(try_number)
                     continue
-                raise e
+                raise apptuit_exception
 
     @staticmethod
     def backoff_with_jitter(try_number):
+        """
+        This will add sleep to current execution, based on try number
+        :param try_number: the retry_count
+        :return: None
+        """
         sleep_time = int(random.randrange(0, min(30, BASE_SLEEP_TIME_SECS * (2 ** try_number))))
         time.sleep(sleep_time)
 
@@ -336,19 +341,19 @@ class Apptuit(object):
             try:
                 try_number += 1
                 return self._execute_query(url, start, end, timeout)
-            except requests.exceptions.HTTPError as e:
+            except requests.exceptions.HTTPError as http_error:
                 if retry_count < try_number:
                     raise ApptuitException("Failed to get response from Apptuit"
-                                       "query service due to exception: %s" % str(e))
-                if e.response is not None:
-                    if 500 <= e.response.status_code <= 599:
+                                           "query service due to exception: %s" % str(http_error))
+                if http_error.response is not None:
+                    if 500 <= http_error.response.status_code <= 599:
                         self.backoff_with_jitter(try_number)
                         continue
                 raise ApptuitException("Failed to get response from Apptuit"
-                                       "query service due to exception: %s" % str(e))
-            except requests.exceptions.SSLError as e:
+                                       "query service due to exception: %s" % str(http_error))
+            except requests.exceptions.SSLError as ssl_error:
                 raise ApptuitException("Failed to get response from Apptuit"
-                                       "query service due to exception: %s" % str(e))
+                                       "query service due to exception: %s" % str(ssl_error))
 
     def _execute_query(self, query_string, start, end, timeout):
         headers = dict()
