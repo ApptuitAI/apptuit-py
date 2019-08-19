@@ -121,8 +121,8 @@ def test_send_with_retry(mock_post):
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
     dps = []
     ts = int(time.time())
-    for _ in range(100):
-        dps.append(DataPoint(metric=metric_name, tags=tags, timestamp=ts+_, value=random.random()))
+    for i in range(100):
+        dps.append(DataPoint(metric=metric_name, tags=tags, timestamp=ts + i, value=random.random()))
     with assert_raises(ApptuitException):
         client.send(dps, retry_count=1)
     assert_equals(2, mock_post.call_count)
