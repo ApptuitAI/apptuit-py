@@ -341,13 +341,11 @@ class Apptuit(object):
                 try_number += 1
                 return self._execute_query(url, start, end, timeout)
             except requests.exceptions.HTTPError as http_error:
-                if retry_count < try_number:
-                    raise ApptuitException("Failed to get response from Apptuit"
-                                           "query service due to exception: %s" % str(http_error))
-                if http_error.response is not None:
-                    if 500 <= http_error.response.status_code <= 599:
-                        self.backoff_with_jitter(try_number)
-                        continue
+                if retry_count >= try_number:
+                    if http_error.response is not None:
+                        if 500 <= http_error.response.status_code <= 599:
+                            self.backoff_with_jitter(try_number)
+                            continue
                 raise ApptuitException("Failed to get response from Apptuit"
                                        "query service due to exception: %s" % str(http_error))
             except requests.exceptions.SSLError as ssl_error:

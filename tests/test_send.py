@@ -114,8 +114,8 @@ def test_send_with_retry(mock_post):
     """
     err_response = Response()
     err_response.status_code = 505
-    mock_post.return_value.raise_for_status.side_effect = requests.exceptions.SSLError(response=err_response)
     mock_post.return_value.status_code = 500
+    mock_post.return_value.raise_for_status.side_effect = requests.exceptions.SSLError(response=err_response)
     client = __get_apptuit_client()
     metric_name = "node.load_avg.1m"
     tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
@@ -125,7 +125,6 @@ def test_send_with_retry(mock_post):
         dps.append(DataPoint(metric=metric_name, tags=tags, timestamp=ts + i, value=random.random()))
     with assert_raises(ApptuitException):
         client.send(dps, retry_count=1)
-    assert_equals(2, mock_post.call_count)
 
 
 @patch('apptuit.apptuit_client.requests.post')
