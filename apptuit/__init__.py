@@ -18,7 +18,7 @@ APPTUIT_PY_TOKEN = "APPTUIT_API_TOKEN"
 APPTUIT_PY_TAGS = "APPTUIT_TAGS"
 DEPRECATED_APPTUIT_PY_TOKEN = "APPTUIT_PY_TOKEN"
 DEPRECATED_APPTUIT_PY_TAGS = "APPTUIT_PY_TAGS"
-__version__ = '2.2.0'
+__version__ = '2.3.0'
 
 from apptuit import pyformance, timeseries
 from .apptuit_client import Apptuit, DataPoint, ApptuitException, ApptuitSendException, \
