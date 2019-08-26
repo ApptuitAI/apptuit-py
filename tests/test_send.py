@@ -18,6 +18,9 @@ import os
 import random
 import time
 
+import requests
+from requests import Response
+
 try:
     from unittest.mock import Mock, patch
 except ImportError:
@@ -103,6 +106,25 @@ def test_send_server_error(mock_post):
             points_sent += 100
         if points_sent > 500:
             break
+
+@patch('apptuit.apptuit_client.requests.post')
+def test_send_with_retry(mock_post):
+    """
+    Test for the case when there is an error from the backend for send
+    """
+    err_response = Response()
+    err_response.status_code = 505
+    mock_post.return_value.status_code = 500
+    mock_post.return_value.raise_for_status.side_effect = requests.exceptions.SSLError(response=err_response)
+    client = __get_apptuit_client()
+    metric_name = "node.load_avg.1m"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    dps = []
+    ts = int(time.time())
+    for i in range(100):
+        dps.append(DataPoint(metric=metric_name, tags=tags, timestamp=ts + i, value=random.random()))
+    with assert_raises(ApptuitException):
+        client.send(dps, retry_count=1)
 
 
 @patch('apptuit.apptuit_client.requests.post')
