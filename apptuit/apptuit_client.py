@@ -230,7 +230,10 @@ class Apptuit(object):
         Params:
             datapoints: A list of DataPoint objects
             timeout: Timeout (in seconds) for the HTTP request
-            retry_count: Number of time it has to try, in case of an exception
+            retry_count: This will allow you to retry to send
+            DP's in case of errors. This uses Backoff-jitter
+            algo to retry
+            `https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/`
         It raises an ApptuitSendException in case the backend API responds with an error
         """
         if not datapoints:
@@ -248,6 +251,11 @@ class Apptuit(object):
                         self.backoff_with_jitter(try_number)
                         continue
                 raise apptuit_exception
+            except requests.exceptions.ConnectionError as conn_err:
+                if retry_count >= try_number:
+                    self.backoff_with_jitter(try_number)
+                    continue
+                raise conn_err
 
     @staticmethod
     def backoff_with_jitter(try_number):
@@ -317,6 +325,10 @@ class Apptuit(object):
                 start - the start timestamp (unix epoch in seconds)
                 end - the end timestamp (unix epoch in seconds)
                 timeout - timeout (in seconds) for the HTTP request
+                retry_count: This will allow you to retry to send
+                DP's in case of errors. this uses Backoff-jitter
+                algo to retry
+                `https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/`
             Returns a QueryResult object
             Individual queried items can be accessed by indexing the result object using either
             the integer index of the metric in the query or the metric name.
@@ -351,6 +363,11 @@ class Apptuit(object):
             except requests.exceptions.SSLError as ssl_error:
                 raise ApptuitException("Failed to get response from Apptuit"
                                        "query service due to exception: %s" % str(ssl_error))
+            except requests.exceptions.ConnectionError as connection_error:
+                if retry_count >= try_number:
+                    self.backoff_with_jitter(try_number)
+                    continue
+                raise connection_error
 
     def _execute_query(self, query_string, start, end, timeout):
         headers = dict()

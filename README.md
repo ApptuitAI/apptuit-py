@@ -167,7 +167,9 @@ class OrderService:
         self.reporter = ApptuitReporter(registry=registry,
                                     reporting_interval=60, # data reported every 1 minute
                                     token=token,
-                                    tags=global_tags)
+                                    tags=global_tags,
+                                    retry=2 #this will retry in case of 500 response or connection errors occur.
+                                    )
         # reporter.start() will start reporting the data asynchronously based on the reporting_interval set.
         self.reporter.start()
 
@@ -560,7 +562,9 @@ while True:
     for metric in metrics:
         dps.append(DataPoint(metric, tags, curtime, random.random()))
     if len(dps) == 100:
-        client.send(dps)
+        client.send(dps, 
+                retry_count=3 #this will retry in case of 500 response or connection errors occur.
+            )
         dps = []
     time.sleep(60)
 ```
@@ -611,7 +615,9 @@ import time
 token = 'my_token' # replace with your Apptuit token
 apptuit = Apptuit(token=token)
 start_time = int(time.time()) - 3600 # let's query for data going back 1 hour from now
-query_res = apptuit.query("fetch('proc.cpu.percent').downsample('1m', 'avg')", start=start_time)
+query_res = apptuit.query("fetch('proc.cpu.percent').downsample('1m', 'avg')", start=start_time
+                            retry_count=3 #this will retry in case of 500 response or connection errors occur.
+                        )
 # we can create a Pandas dataframe from the result object by calling to_df()
 df = query_res[0].to_df()
 # Another way of creating the DF is accessing by the metric name in the query
