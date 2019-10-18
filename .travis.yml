@@ -27,7 +27,7 @@ before_script:
 script:
 - python -c "import sys; print('python version:%s' % sys.version);"
 - python -c "import sys; print('python version:%s' % sys.version[0]);"
-- "./pylint-runner.py -s"
+- if [[ "$TRAVIS_PYTHON_VERSION" != "3.7"]]; then "./pylint-runner.py -s";
 - nosetests -v --with-coverage
 - python setup.py sdist bdist_wheel
 after_success:
