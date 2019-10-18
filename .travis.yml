@@ -28,6 +28,7 @@ script:
 - python -c "import sys; print('python version:%s' % sys.version);"
 - python -c "import sys; print('python version:%s' % sys.version[0]);"
 - if [[ "$TRAVIS_PYTHON_VERSION" -ne "3.7" ]]; then "./pylint-runner.py -s";
+  fi
 - nosetests -v --with-coverage
 - python setup.py sdist bdist_wheel
 after_success:
