@@ -175,6 +175,40 @@ def test_multiple_retries_conn_err(mock_get):
         client.query(query, start, end, retry_count=3)
     assert_equals(mock_get.call_count, 4)
 
+@patch('apptuit.apptuit_client.requests.get')
+def test_multiple_retries_read_to_err(mock_get):
+    """
+    Test that the query API attempts retries when an error is returned from
+    the backend API. Since we patch the status code as 504 and create an HTTPError
+    as a side effect of the get call, we cannot verify that the retries succeed.
+    """
+    mock_get.side_effect = requests.exceptions.ReadTimeout
+    token = 'sdksdk203afdsfj_sadasd3939'
+    client = Apptuit(sanitize_mode=None, token=token)
+    query = "fetch('nyc.taxi.rides')"
+    start = 1406831400
+    end = 1407609000
+    with assert_raises(requests.exceptions.ReadTimeout):
+        client.query(query, start, end, retry_count=3)
+    assert_equals(mock_get.call_count, 4)
+
+@patch('apptuit.apptuit_client.requests.get')
+def test_multiple_retries_request_err(mock_get):
+    """
+    Test that the query API attempts retries when an error is returned from
+    the backend API. Since we patch the status code as 504 and create an HTTPError
+    as a side effect of the get call, we cannot verify that the retries succeed.
+    """
+    mock_get.side_effect = requests.exceptions.RequestException
+    token = 'sdksdk203afdsfj_sadasd3939'
+    client = Apptuit(sanitize_mode=None, token=token)
+    query = "fetch('nyc.taxi.rides')"
+    start = 1406831400
+    end = 1407609000
+    with assert_raises(requests.exceptions.RequestException):
+        client.query(query, start, end, retry_count=3)
+    assert_equals(mock_get.call_count, 4)
+
 
 @patch('apptuit.apptuit_client.requests.get')
 def test_get_error_with_no_retry(mock_get):
