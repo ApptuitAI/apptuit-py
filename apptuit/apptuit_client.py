@@ -368,6 +368,16 @@ class Apptuit(object):
                     self.backoff_with_jitter(try_number)
                     continue
                 raise connection_error
+            except requests.exceptions.ReadTimeout as read_time_out_error:
+                if retry_count >= try_number:
+                    self.backoff_with_jitter(try_number)
+                    continue
+                raise read_time_out_error
+            except requests.exceptions.RequestException as request_error:
+                if retry_count >= try_number:
+                    self.backoff_with_jitter(try_number)
+                    continue
+                raise request_error
 
     def _execute_query(self, query_string, start, end, timeout):
         headers = dict()
