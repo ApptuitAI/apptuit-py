@@ -21,7 +21,7 @@ setup(
         ],
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
-    install_requires=['requests>=2.14.0', 'pyformance>=0.4', 'backports.functools_lru_cache;python_version<"3"'],
+    install_requires=['requests>=2.14.0', 'pyformance>=0.4', 'backports.functools_lru_cache>=1.5;python_version<"3"'],
     tests_require=['mock;python_version<"3.3"', 'nose', 'pandas', 'numpy'],
     test_suite='nose.collector',
     data_files=['LICENSE']
