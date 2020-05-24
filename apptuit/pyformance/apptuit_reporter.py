@@ -158,7 +158,7 @@ class ApptuitReporter(Reporter):
             try:
                 with self._meta_metrics_registry.timer(API_CALL_TIMER).time():
                     end_index = min(dps_len, i + BATCH_SIZE)
-                    self.client.send(dps[i: end_index], self.retry_count)
+                    self.client.send(dps[i: end_index], retry_count=self.retry_count)
                     points_sent_count = end_index - i
                     self._update_counter(NUMBER_OF_TOTAL_POINTS, points_sent_count)
                     self._update_counter(NUMBER_OF_SUCCESSFUL_POINTS, points_sent_count)
@@ -177,7 +177,7 @@ class ApptuitReporter(Reporter):
                         exception.failed,
                         exception.errors
                     )
-        self.client.send(meta_dps, self.retry_count)
+        self.client.send(meta_dps, retry_count=self.retry_count)
         if failed_count != 0:
             raise ApptuitSendException("Failed to send %d out of %d points" %
                                        (failed_count, dps_len), success=success_count,
