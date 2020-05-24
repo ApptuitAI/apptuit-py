@@ -65,7 +65,8 @@ class ApptuitReporter(Reporter):
     def __init__(self, registry=None, reporting_interval=10, token=None,
                  api_endpoint="https://api.apptuit.ai", prefix="", tags=None,
                  error_handler=default_error_handler, disable_host_tag=None,
-                 collect_process_metrics=False, sanitize_mode="prometheus"):
+                 collect_process_metrics=False, sanitize_mode="prometheus",
+                 retry_count=0):
         """
         Parameters
         ----------
@@ -93,9 +94,13 @@ class ApptuitReporter(Reporter):
             sanitize_mode: Is a string value which will enable sanitizer, sanitizer will
                     automatically change your metric names to be compatible with apptuit
                     or prometheus. Set it to None if not needed.
+            retry_count: This will allow you to retry to send DP's in case of errors.
+                This uses Backoff-jitter algo to retry.
+                `https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/`
         """
         super(ApptuitReporter, self).__init__(registry=registry,
                                               reporting_interval=reporting_interval)
+        self.retry_count = retry_count
         self.endpoint = api_endpoint
         self.token = token
         self.tags = tags
@@ -153,7 +158,7 @@ class ApptuitReporter(Reporter):
             try:
                 with self._meta_metrics_registry.timer(API_CALL_TIMER).time():
                     end_index = min(dps_len, i + BATCH_SIZE)
-                    self.client.send(dps[i: end_index])
+                    self.client.send(dps[i: end_index], self.retry_count)
                     points_sent_count = end_index - i
                     self._update_counter(NUMBER_OF_TOTAL_POINTS, points_sent_count)
                     self._update_counter(NUMBER_OF_SUCCESSFUL_POINTS, points_sent_count)
@@ -172,7 +177,7 @@ class ApptuitReporter(Reporter):
                         exception.failed,
                         exception.errors
                     )
-        self.client.send(meta_dps)
+        self.client.send(meta_dps, self.retry_count)
         if failed_count != 0:
             raise ApptuitSendException("Failed to send %d out of %d points" %
                                        (failed_count, dps_len), success=success_count,

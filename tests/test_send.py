@@ -126,6 +126,21 @@ def test_send_with_retry(mock_post):
     with assert_raises(ApptuitException):
         client.send(dps, retry_count=1)
 
+@patch('apptuit.apptuit_client.requests.post')
+def test_send_with_retry_con_err(mock_post):
+    """
+    Test for the case when there is an error from the backend for send
+    """
+    mock_post.side_effect = requests.exceptions.ConnectionError
+    client = __get_apptuit_client()
+    metric_name = "node.load_avg.1m"
+    tags = {"host": "localhost", "region": "us-east-1", "service": "web-server"}
+    dps = []
+    ts = int(time.time())
+    for i in range(100):
+        dps.append(DataPoint(metric=metric_name, tags=tags, timestamp=ts + i, value=random.random()))
+    with assert_raises(requests.exceptions.ConnectionError):
+        client.send(dps, retry_count=1)
 
 @patch('apptuit.apptuit_client.requests.post')
 def test_send_413_error(mock_post):
